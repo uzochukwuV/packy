@@ -1,29 +1,44 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { WagmiProvider } from 'wagmi';
+import { config } from "./lib/wagmi";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BetSlipProvider } from "@/context/BetSlipContext";
+
+import Dashboard from "@/pages/Dashboard";
+import Liquidity from "@/pages/Liquidity";
+import MyBets from "@/pages/MyBets";
+import Season from "@/pages/Season";
 import NotFound from "@/pages/not-found";
+import { MainLayout } from "@/components/layout/MainLayout";
+
+// Create a client
+const queryClient = new QueryClient();
 
 function Router() {
   return (
-    <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
+    <MainLayout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/liquidity" component={Liquidity} />
+        <Route path="/my-bets" component={MyBets} />
+        <Route path="/season" component={Season} />
+        <Route component={NotFound} />
+      </Switch>
+    </MainLayout>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <BetSlipProvider>
+          <Toaster />
+          <Router />
+        </BetSlipProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 
