@@ -3,6 +3,21 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import {
+  requestFaucetTokens,
+  getFaucetStats,
+  getUserFaucetHistory,
+  canRequestTokens,
+} from "./web3/faucet";
+import {
+  getGameState,
+  startSeason,
+  startRound,
+  requestMatchResults,
+  settleRound,
+  seedRoundPools,
+  finalizeRoundRevenue,
+} from "./web3/game-monitor";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -13,12 +28,12 @@ export async function registerRoutes(
     try {
       const input = api.users.getOrCreate.input.parse(req.body);
       let user = await storage.getUserByWallet(input.walletAddress);
-      
+
       if (!user) {
         user = await storage.createUser(input);
         return res.status(201).json(user);
       }
-      
+
       res.json(user);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -28,6 +43,416 @@ export async function registerRoutes(
         });
       }
       throw err;
+    }
+  });
+
+  // ============ Faucet Routes ============
+
+  /**
+   * Request LEAGUE tokens from faucet
+   * POST /api/faucet/request
+   * Body: { address: string }
+   */
+  app.post('/api/faucet/request', async (req, res) => {
+    try {
+      const { address } = req.body;
+
+      if (!address || typeof address !== 'string' || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid Ethereum address'
+        });
+      }
+
+      const result = await requestFaucetTokens(address as `0x${string}`);
+
+      if (result.success) {
+        return res.json(result);
+      } else {
+        return res.status(429).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to process faucet request'
+      });
+    }
+  });
+
+  /**
+   * Get faucet statistics (balance, config)
+   * GET /api/faucet/stats
+   */
+  app.get('/api/faucet/stats', async (_req, res) => {
+    try {
+      const stats = await getFaucetStats();
+      res.json(stats);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get faucet stats'
+      });
+    }
+  });
+
+  /**
+   * Get user's faucet request history
+   * GET /api/faucet/history/:address
+   */
+  app.get('/api/faucet/history/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+
+      if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({ error: 'Invalid Ethereum address' });
+      }
+
+      const history = getUserFaucetHistory(address as `0x${string}`);
+      res.json(history);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get faucet history'
+      });
+    }
+  });
+
+  /**
+   * Check if user can request tokens
+   * GET /api/faucet/can-request/:address
+   */
+  app.get('/api/faucet/can-request/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+
+      if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({ error: 'Invalid Ethereum address' });
+      }
+
+      const result = canRequestTokens(address as `0x${string}`);
+      res.json(result);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to check request status'
+      });
+    }
+  });
+
+  // ============ Admin Game Management Routes ============
+
+  /**
+   * Get current game state
+   * GET /api/admin/game-state
+   */
+  app.get('/api/admin/game-state', async (_req, res) => {
+    try {
+      const state = await getGameState();
+
+      // Convert BigInt values to strings for JSON serialization
+      const serializedState = {
+        currentSeasonId: state.currentSeasonId.toString(),
+        currentRoundId: state.currentRoundId.toString(),
+        season: state.season ? {
+          seasonId: state.season.seasonId.toString(),
+          startTime: state.season.startTime.toString(),
+          currentRound: state.season.currentRound.toString(),
+          active: state.season.active,
+          completed: state.season.completed,
+          winningTeamId: state.season.winningTeamId.toString(),
+        } : null,
+        round: state.round ? {
+          roundId: state.round.roundId.toString(),
+          seasonId: state.round.seasonId.toString(),
+          startTime: state.round.startTime.toString(),
+          vrfRequestId: state.round.vrfRequestId.toString(),
+          settled: state.round.settled,
+        } : null,
+        roundSettled: state.roundSettled,
+        timeUntilRoundEnd: state.timeUntilRoundEnd,
+        shouldRequestVRF: state.shouldRequestVRF,
+        shouldSettleRound: state.shouldSettleRound,
+      };
+
+      res.json(serializedState);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get game state'
+      });
+    }
+  });
+
+  /**
+   * Start a new season
+   * POST /api/admin/start-season
+   */
+  app.post('/api/admin/start-season', async (_req, res) => {
+    try {
+      const result = await startSeason();
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to start season'
+      });
+    }
+  });
+
+  /**
+   * Start a new round
+   * POST /api/admin/start-round
+   */
+  app.post('/api/admin/start-round', async (_req, res) => {
+    try {
+      const result = await startRound();
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to start round'
+      });
+    }
+  });
+
+  /**
+   * Request VRF for match results
+   * POST /api/admin/request-vrf
+   * Body: { enableNativePayment?: boolean }
+   */
+  app.post('/api/admin/request-vrf', async (req, res) => {
+    try {
+      const { enableNativePayment = false } = req.body;
+      const result = await requestMatchResults(enableNativePayment);
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to request VRF'
+      });
+    }
+  });
+
+  /**
+   * Settle round after VRF fulfillment
+   * POST /api/admin/settle-round
+   * Body: { roundId: string }
+   */
+  app.post('/api/admin/settle-round', async (req, res) => {
+    try {
+      const { roundId } = req.body;
+
+      if (!roundId) {
+        return res.status(400).json({
+          success: false,
+          error: 'roundId is required'
+        });
+      }
+
+      const result = await settleRound(BigInt(roundId));
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to settle round'
+      });
+    }
+  });
+
+  /**
+   * Seed round pools
+   * POST /api/admin/seed-pools
+   * Body: { roundId: string }
+   */
+  app.post('/api/admin/seed-pools', async (req, res) => {
+    try {
+      const { roundId } = req.body;
+
+      if (!roundId) {
+        return res.status(400).json({
+          success: false,
+          error: 'roundId is required'
+        });
+      }
+
+      const result = await seedRoundPools(BigInt(roundId));
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to seed pools'
+      });
+    }
+  });
+
+  /**
+   * Finalize round revenue distribution
+   * POST /api/admin/finalize-revenue
+   * Body: { roundId: string }
+   */
+  app.post('/api/admin/finalize-revenue', async (req, res) => {
+    try {
+      const { roundId } = req.body;
+
+      if (!roundId) {
+        return res.status(400).json({
+          success: false,
+          error: 'roundId is required'
+        });
+      }
+
+      const result = await finalizeRoundRevenue(BigInt(roundId));
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to finalize revenue'
+      });
+    }
+  });
+
+  // ============ Bet Tracking Routes ============
+
+  /**
+   * Save a bet to database
+   * POST /api/bets
+   * Body: { betId, bettor, seasonId, roundId, amount, matchIndices, outcomes, parlayMultiplier, potentialWinnings, txHash }
+   */
+  app.post('/api/bets', async (req, res) => {
+    try {
+      const { betId, bettor, seasonId, roundId, amount, matchIndices, outcomes, parlayMultiplier, potentialWinnings, txHash } = req.body;
+
+      // Validate required fields
+      if (!betId || !bettor || !seasonId || !roundId || !amount || !matchIndices || !outcomes || !parlayMultiplier || !potentialWinnings || !txHash) {
+        return res.status(400).json({
+          error: 'Missing required fields'
+        });
+      }
+
+      // Validate bettor address
+      if (!bettor.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({
+          error: 'Invalid bettor address'
+        });
+      }
+
+      const bet = await storage.saveBet({
+        betId,
+        bettor,
+        seasonId,
+        roundId,
+        amount,
+        matchIndices: JSON.stringify(matchIndices),
+        outcomes: JSON.stringify(outcomes),
+        parlayMultiplier,
+        potentialWinnings,
+        status: 'pending',
+        txHash
+      });
+
+      res.json(bet);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to save bet'
+      });
+    }
+  });
+
+  /**
+   * Get user's bets
+   * GET /api/bets/:address
+   * Query params: ?limit=50&offset=0&roundId=1&seasonId=1
+   */
+  app.get('/api/bets/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { limit = '50', offset = '0', roundId, seasonId } = req.query;
+
+      if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({ error: 'Invalid Ethereum address' });
+      }
+
+      let betsData;
+
+      if (roundId) {
+        // Get bets for specific round
+        betsData = await storage.getUserBetsByRound(address, roundId as string);
+      } else if (seasonId) {
+        // Get bets for specific season
+        betsData = await storage.getUserBetsBySeason(address, seasonId as string);
+      } else {
+        // Get all bets with pagination
+        betsData = await storage.getUserBets(address, parseInt(limit as string), parseInt(offset as string));
+      }
+
+      // Parse JSON fields
+      const formattedBets = betsData.map(bet => ({
+        ...bet,
+        matchIndices: JSON.parse(bet.matchIndices),
+        outcomes: JSON.parse(bet.outcomes)
+      }));
+
+      res.json(formattedBets);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get bets'
+      });
+    }
+  });
+
+  /**
+   * Update bet status
+   * PATCH /api/bets/:betId/status
+   * Body: { status: 'won' | 'lost' | 'claimed' }
+   */
+  app.patch('/api/bets/:betId/status', async (req, res) => {
+    try {
+      const { betId } = req.params;
+      const { status } = req.body;
+
+      if (!status || !['won', 'lost', 'claimed'].includes(status)) {
+        return res.status(400).json({
+          error: 'Invalid status. Must be won, lost, or claimed'
+        });
+      }
+
+      const bet = await storage.updateBetStatus(betId, status);
+
+      if (!bet) {
+        return res.status(404).json({ error: 'Bet not found' });
+      }
+
+      res.json(bet);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to update bet status'
+      });
     }
   });
 

@@ -1,14 +1,20 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Coins, History, Trophy, Wallet } from "lucide-react";
+import { LayoutDashboard, Coins, History, Trophy, Wallet, Droplet, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
+import { useLeagueBalance } from "@/hooks/contracts/useLeagueToken";
+import { useFaucet } from "@/hooks/useFaucet";
+import { useState } from "react";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
+  const { balanceFloat, formattedBalance, refetch } = useLeagueBalance(address);
+  const { requestTokens, isLoading, error } = useFaucet();
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const navItems = [
     { label: "Betting Dashboard", icon: LayoutDashboard, href: "/" },
@@ -22,6 +28,17 @@ export function Sidebar() {
       disconnect();
     } else {
       connect({ connector: injected() });
+    }
+  };
+
+  const handleFaucetClick = async () => {
+    try {
+      await requestTokens();
+      setShowSuccess(true);
+      refetch(); // Refresh balance after getting tokens
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      // Error is already handled by the hook
     }
   };
 
@@ -50,7 +67,60 @@ export function Sidebar() {
         </nav>
       </div>
 
-      <div className="mt-auto p-6 border-t border-gray-200">
+      <div className="mt-auto p-6 border-t border-gray-200 space-y-3">
+        {/* LEAGUE Balance Display */}
+        {isConnected && (
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-4 border border-primary/20">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Balance</span>
+              <Coins className="w-4 h-4 text-primary" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 font-mono">
+              {balanceFloat.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">LEAGUE</div>
+          </div>
+        )}
+
+        {/* Faucet Button */}
+        {isConnected && (
+          <button
+            onClick={handleFaucetClick}
+            disabled={isLoading || showSuccess}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all",
+              showSuccess
+                ? "bg-green-500 text-white border-green-500"
+                : "bg-primary text-white hover:bg-primary/90 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            )}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Requesting...
+              </>
+            ) : showSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Tokens Sent!
+              </>
+            ) : (
+              <>
+                <Droplet className="w-4 h-4" />
+                Get 1000 LEAGUE
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
+            {error}
+          </div>
+        )}
+
+        {/* Wallet Connect/Disconnect */}
         <button
           onClick={handleWalletClick}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 hover:border-primary/50 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:-translate-y-0.5"

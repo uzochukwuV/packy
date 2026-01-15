@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { startMonitoring, stopMonitoring } from "./web3/game-monitor";
 
 const app = express();
 const httpServer = createServer(app);
@@ -84,15 +85,40 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  // const port = parseInt(process.env.PORT || "5000", 10);
+  httpServer.listen(process.env.PORT || 5000, () => {
+    log(`Server listening on port ${process.env.PORT || 5000}`);
+
+    // Start GameEngine monitoring system
+    // Only start if Web3 config is available
+    if (process.env.ADMIN_PRIVATE_KEY && process.env.RPC_URL) {
+      try {
+        startMonitoring();
+        log('GameEngine monitoring started', 'web3');
+      } catch (error: any) {
+        log(`Failed to start GameEngine monitoring: ${error.message}`, 'web3');
+      }
+    } else {
+      log('GameEngine monitoring disabled (missing ADMIN_PRIVATE_KEY or RPC_URL)', 'web3');
+    }
+  });
+
+  // Graceful shutdown
+  process.on('SIGINT', () => {
+    log('Shutting down server...');
+    stopMonitoring();
+    httpServer.close(() => {
+      log('Server shut down');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGTERM', () => {
+    log('Shutting down server...');
+    stopMonitoring();
+    httpServer.close(() => {
+      log('Server shut down');
+      process.exit(0);
+    });
+  });
 })();
