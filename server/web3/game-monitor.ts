@@ -4,7 +4,7 @@
  */
 
 import { publicClient, walletClient, CONTRACTS, MONITORING_CONFIG, log } from './config';
-import { GameEngineABI, BettingPoolABI } from './abis/index.js';
+import { GameEngineABI, BettingPoolABI } from './abis/index';
 
 export interface GameState {
   currentSeasonId: bigint;
