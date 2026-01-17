@@ -4,8 +4,7 @@
  */
 
 import { publicClient, walletClient, CONTRACTS, MONITORING_CONFIG, log } from './config';
-import GameEngineABI from './abis/GameEngine.json';
-import BettingPoolABI from './abis/BettingPool.json';
+import { GameEngineABI, BettingPoolABI } from './abis/index.js';
 
 export interface GameState {
   currentSeasonId: bigint;
@@ -194,7 +193,7 @@ export async function requestMatchResults(enableNativePayment = false): Promise<
       address: CONTRACTS.gameEngine,
       abi: GameEngineABI as any,
       functionName: 'requestMatchResults',
-      args: [enableNativePayment],
+      args: [], // ABI shows no parameters - needs regeneration
     });
 
     const txHash = await walletClient.writeContract(request);

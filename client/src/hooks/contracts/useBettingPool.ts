@@ -4,6 +4,7 @@
  */
 
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { sepolia } from 'wagmi/chains';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
 import BettingPoolABI from '@/abis/bettingpool.json';
 import type {
@@ -166,6 +167,7 @@ export function usePreviewBetPayout(betId: bigint | undefined) {
     abi: BettingPoolABI,
     functionName: 'previewBetPayout',
     args: betId !== undefined ? [betId] : undefined,
+    chainId: sepolia.id,
     query: {
       enabled: betId !== undefined,
     },
@@ -190,24 +192,13 @@ export function useRoundAccounting(roundId: bigint | undefined) {
 }
 
 /**
- * Get protocol reserve amount
+ * Get season reward pool amount
  */
-export function useProtocolReserve() {
+export function useSeasonRewardPool() {
   return useReadContract({
     address: DEPLOYED_ADDRESSES.bettingPool,
     abi: BettingPoolABI,
-    functionName: 'protocolReserve',
-  });
-}
-
-/**
- * Get locked parlay reserve
- */
-export function useLockedParlayReserve() {
-  return useReadContract({
-    address: DEPLOYED_ADDRESSES.bettingPool,
-    abi: BettingPoolABI,
-    functionName: 'lockedParlayReserve',
+    functionName: 'seasonRewardPool',
   });
 }
 

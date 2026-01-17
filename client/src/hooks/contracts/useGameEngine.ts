@@ -4,6 +4,7 @@
  */
 
 import { useReadContract, useReadContracts } from 'wagmi';
+import { sepolia } from 'wagmi/chains';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
 import GameEngineABI from '@/abis/Gameengine.json';
 import type { Match, Team, Season, Round } from '@/contracts/types';
@@ -18,6 +19,7 @@ export function useCurrentSeason() {
     address: DEPLOYED_ADDRESSES.gameEngine,
     abi: GameEngineABI,
     functionName: 'getCurrentSeason',
+    chainId: sepolia.id,
   });
 }
 
@@ -29,6 +31,7 @@ export function useCurrentRound() {
     address: DEPLOYED_ADDRESSES.gameEngine,
     abi: GameEngineABI,
     functionName: 'getCurrentRound',
+    chainId: sepolia.id,
   });
 }
 
@@ -183,6 +186,16 @@ export function useDashboardData() {
   const { data: matches, ...matchesQuery } = useRoundMatches(roundId);
   const { data: season, ...seasonQuery } = useSeason(seasonId);
   const { data: isSettled } = useIsRoundSettled(roundId);
+
+  console.log({
+    seasonId,
+    roundId,
+    season: season as Season | undefined,
+    matches: matches as readonly Match[] | undefined,
+    isSettled,
+    isLoading: matchesQuery.isLoading || seasonQuery.isLoading,
+    isError: matchesQuery.isError || seasonQuery.isError,
+  });
 
   return {
     seasonId,

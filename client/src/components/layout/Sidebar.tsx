@@ -2,14 +2,15 @@ import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Coins, History, Trophy, Wallet, Droplet, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { injected, metaMask } from "wagmi/connectors";
 import { useLeagueBalance } from "@/hooks/contracts/useLeagueToken";
 import { useFaucet } from "@/hooks/useFaucet";
 import { useState } from "react";
+import { sepolia } from "wagmi/chains";
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { balanceFloat, formattedBalance, refetch } = useLeagueBalance(address);
@@ -27,7 +28,7 @@ export function Sidebar() {
     if (isConnected) {
       disconnect();
     } else {
-      connect({ connector: injected() });
+      connect({ connector: injected(), chainId: sepolia.id });
     }
   };
 
@@ -107,7 +108,7 @@ export function Sidebar() {
             ) : (
               <>
                 <Droplet className="w-4 h-4" />
-                Get 1000 LEAGUE
+                Get 1000 LEAGUE on {chainId}
               </>
             )}
           </button>

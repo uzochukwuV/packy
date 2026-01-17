@@ -4,7 +4,7 @@
  */
 
 import { publicClient, walletClient, CONTRACTS, FAUCET_CONFIG, log } from './config';
-import LeagueTokenABI from './abis/LeagueToken.json';
+import { LeagueTokenABI } from './abis/index.js';
 
 // In-memory rate limiting (use Redis in production)
 interface FaucetRequest {

@@ -4,6 +4,7 @@
  */
 
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { sepolia } from 'wagmi/chains';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
 import LiquidityPoolABI from '@/abis/LiquidityPool.json';
 
@@ -17,6 +18,7 @@ export function useTotalLiquidity() {
     address: DEPLOYED_ADDRESSES.liquidityPool,
     abi: LiquidityPoolABI,
     functionName: 'totalLiquidity',
+    chainId: sepolia.id,
     query: {
       refetchInterval: 10000, // Refetch every 10s
     },
@@ -31,6 +33,7 @@ export function useTotalShares() {
     address: DEPLOYED_ADDRESSES.liquidityPool,
     abi: LiquidityPoolABI,
     functionName: 'totalShares',
+    chainId: sepolia.id,
   });
 }
 
@@ -42,6 +45,7 @@ export function useLockedLiquidity() {
     address: DEPLOYED_ADDRESSES.liquidityPool,
     abi: LiquidityPoolABI,
     functionName: 'lockedLiquidity',
+    chainId: sepolia.id,
     query: {
       refetchInterval: 10000,
     },
@@ -57,6 +61,7 @@ export function useUserLPShares(address: `0x${string}` | undefined) {
     abi: LiquidityPoolABI,
     functionName: 'lpShares',
     args: address ? [address] : undefined,
+    chainId: sepolia.id,
     query: {
       enabled: !!address,
     },
@@ -72,6 +77,7 @@ export function useLPValue(address: `0x${string}` | undefined) {
     abi: LiquidityPoolABI,
     functionName: 'getLPValue',
     args: address ? [address] : undefined,
+    chainId: sepolia.id,
     query: {
       enabled: !!address,
     },
@@ -86,6 +92,7 @@ export function useAvailableLiquidity() {
     address: DEPLOYED_ADDRESSES.liquidityPool,
     abi: LiquidityPoolABI,
     functionName: 'getAvailableLiquidity',
+    chainId: sepolia.id,
     query: {
       refetchInterval: 10000,
     },
@@ -101,6 +108,7 @@ export function usePreviewDeposit(amount: bigint | undefined) {
     abi: LiquidityPoolABI,
     functionName: 'previewDeposit',
     args: amount !== undefined ? [amount] : undefined,
+    chainId: sepolia.id,
     query: {
       enabled: amount !== undefined && amount > 0n,
     },
@@ -116,6 +124,7 @@ export function usePreviewWithdrawal(shares: bigint | undefined) {
     abi: LiquidityPoolABI,
     functionName: 'previewWithdrawal',
     args: shares !== undefined ? [shares] : undefined,
+    chainId: sepolia.id,
     query: {
       enabled: shares !== undefined && shares > 0n,
     },
@@ -130,6 +139,7 @@ export function useUtilizationRate() {
     address: DEPLOYED_ADDRESSES.liquidityPool,
     abi: LiquidityPoolABI,
     functionName: 'getUtilizationRate',
+    chainId: sepolia.id,
     query: {
       refetchInterval: 10000,
     },

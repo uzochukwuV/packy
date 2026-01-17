@@ -10,7 +10,7 @@ import {
   usePreviewDeposit,
   usePreviewWithdrawal
 } from "@/hooks/contracts/useLiquidityPool";
-import { useLeagueBalance, useLeagueAllowance, useApproveLeague } from "@/hooks/contracts/useLeagueToken";
+import { useLeagueBalance, useLeagueAllowanceForLP, useApproveLeagueForLP } from "@/hooks/contracts/useLeagueToken";
 import { DEPLOYED_ADDRESSES } from "@/contracts/addresses";
 import { formatToken, parseToken } from "@/contracts/types";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +40,7 @@ export default function Liquidity() {
   } = useUserLPPosition(address);
   
   const { balance: userBalance, formattedBalance } = useLeagueBalance(address);
-  const { data: allowance, refetch: refetchAllowance } = useLeagueAllowance(address);
+  const { data: allowance, refetch: refetchAllowance } = useLeagueAllowanceForLP(address);
   
   // Preview calculations
   const amountBigInt = amount ? parseToken(amount) : 0n;
@@ -48,7 +48,7 @@ export default function Liquidity() {
   const { data: previewAmount } = usePreviewWithdrawal(activeTab === 'withdraw' && userShares ? userShares : undefined);
 
   // Token approval
-  const { approve, isConfirming: isApproving, isSuccess: approveSuccess, isPending: approvePending } = useApproveLeague();
+  const { approve, isConfirming: isApproving, isSuccess: approveSuccess, isPending: approvePending } = useApproveLeagueForLP();
 
   // Liquidity operations
   const { addLiquidity, isConfirming: isDepositing, isSuccess: depositSuccess } = useAddLiquidity();
