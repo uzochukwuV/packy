@@ -287,14 +287,95 @@ export default function Season() {
         })}
       </div>
 
-      <div className="flex justify-end pt-8">
-        <button 
-          disabled={!selectedTeam}
-          className="px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-xl shadow-primary/25 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Confirm Prediction (0.1 ETH)
-        </button>
-      </div>
+      {/* Action Button */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-end pt-4"
+      >
+        <AnimatePresence mode="wait">
+          {canClaim ? (
+            <motion.button
+              key="claim"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={handleClaim}
+              disabled={!isConnected || isClaiming}
+              className={cn(
+                "px-8 py-4 rounded-xl font-bold text-white shadow-xl active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2",
+                isClaiming
+                  ? "bg-gray-400"
+                  : claimSuccess
+                  ? "bg-green-500 shadow-green-500/25"
+                  : "bg-green-600 hover:bg-green-700 shadow-green-600/25"
+              )}
+            >
+              {isClaiming ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Claiming Prize...
+                </>
+              ) : claimSuccess ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Prize Claimed!
+                </>
+              ) : (
+                <>
+                  <Trophy className="w-5 h-5" />
+                  Claim Prize ({formatToken(prizeAmount)} LEAGUE)
+                </>
+              )}
+            </motion.button>
+          ) : hasPredicted ? (
+            <motion.div
+              key="predicted"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="px-8 py-4 rounded-xl font-bold bg-blue-100 text-blue-700 border-2 border-blue-200 flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              Prediction Locked
+            </motion.div>
+          ) : (
+            <motion.button
+              key="predict"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={handlePredict}
+              disabled={!selectedTeam || !isConnected || isPredicting || predictionsLocked}
+              className={cn(
+                "px-8 py-4 rounded-xl font-bold text-white shadow-xl active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2",
+                isPredicting
+                  ? "bg-gray-400"
+                  : predictSuccess
+                  ? "bg-green-500 shadow-green-500/25"
+                  : "bg-primary hover:bg-primary/90 shadow-primary/25"
+              )}
+            >
+              {isPredicting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Submitting...
+                </>
+              ) : predictSuccess ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Submitted!
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-5 h-5" />
+                  Confirm Prediction (Free)
+                </>
+              )}
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }
