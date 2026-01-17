@@ -215,57 +215,173 @@ export default function Liquidity() {
       {/* Interaction Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left: Action Form */}
-        <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm"
+        >
           <div className="flex border-b border-border">
             <button 
               onClick={() => setActiveTab('deposit')}
               className={cn(
-                "flex-1 py-4 text-sm font-bold transition-colors relative",
+                "flex-1 py-4 text-sm font-bold transition-all duration-300 relative",
                 activeTab === 'deposit' ? "text-primary bg-primary/5" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               )}
             >
-              Deposit Liquidity
-              {activeTab === 'deposit' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              <span className="relative z-10">Deposit Liquidity</span>
+              {activeTab === 'deposit' && (
+                <motion.div 
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+                />
+              )}
             </button>
             <button 
               onClick={() => setActiveTab('withdraw')}
               className={cn(
-                "flex-1 py-4 text-sm font-bold transition-colors relative",
+                "flex-1 py-4 text-sm font-bold transition-all duration-300 relative",
                 activeTab === 'withdraw' ? "text-primary bg-primary/5" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               )}
             >
-              Withdraw Liquidity
-              {activeTab === 'withdraw' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              <span className="relative z-10">Withdraw Liquidity</span>
+              {activeTab === 'withdraw' && (
+                <motion.div 
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+                />
+              )}
             </button>
           </div>
 
           <div className="p-6 md:p-8 space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Amount (ETH)</label>
-              <div className="relative">
-                <input 
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono text-lg"
-                />
-                <button className="absolute right-3 top-3 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md hover:bg-primary/20">
-                  MAX
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 text-right">Balance: 42.00 ETH</p>
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-2"
+              >
+                <label className="text-sm font-semibold text-gray-700">
+                  {activeTab === 'deposit' ? 'Deposit Amount (LEAGUE)' : 'Withdraw Amount (LEAGUE)'}
+                </label>
+                <div className="relative">
+                  <input 
+                    type="number"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    disabled={isDepositing || isWithdrawing || approvePending || isApproving}
+                    className="w-full px-4 py-3 bg-gray-50 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono text-lg disabled:opacity-50"
+                  />
+                  <button 
+                    onClick={setMaxAmount}
+                    disabled={isDepositing || isWithdrawing || approvePending || isApproving}
+                    className="absolute right-3 top-3 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md hover:bg-primary/20 transition-colors disabled:opacity-50"
+                  >
+                    MAX
+                  </button>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>
+                    {activeTab === 'deposit' 
+                      ? `Balance: ${formattedBalance} LEAGUE`
+                      : `Your Share: ${formatToken(userLPAmount || 0n)} LEAGUE`
+                    }
+                  </span>
+                  {activeTab === 'deposit' && amount && previewShares && (
+                    <span className="text-primary font-semibold">
+                      ≈ {formatToken(previewShares)} shares
+                    </span>
+                  )}
+                  {activeTab === 'withdraw' && userShares && (
+                    <span className="text-primary font-semibold">
+                      {formatToken(userShares)} shares
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
 
-            <button 
-              disabled={!isConnected}
-              className="w-full py-3.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {activeTab === 'deposit' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
-              {activeTab === 'deposit' ? "Add Liquidity" : "Remove Liquidity"}
-            </button>
+            {/* Action Buttons */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'deposit' && needsApproval ? (
+                <motion.button
+                  key="approve"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={handleApprove}
+                  disabled={!isConnected || !amount || approvePending || isApproving}
+                  className={cn(
+                    "w-full py-3.5 rounded-xl font-bold text-white shadow-lg active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2",
+                    approvePending || isApproving ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600 shadow-blue-500/20"
+                  )}
+                >
+                  {approvePending || isApproving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      {approvePending ? "Approving..." : "Confirming..."}
+                    </>
+                  ) : (
+                    "Approve LEAGUE"
+                  )}
+                </motion.button>
+              ) : (
+                <motion.button
+                  key="action"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={activeTab === 'deposit' ? handleDeposit : handleWithdraw}
+                  disabled={
+                    !isConnected || 
+                    !amount || 
+                    isDepositing || 
+                    isWithdrawing ||
+                    (activeTab === 'withdraw' && !userShares)
+                  }
+                  className={cn(
+                    "w-full py-3.5 rounded-xl font-bold text-white shadow-lg active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2",
+                    isDepositing || isWithdrawing
+                      ? "bg-gray-400"
+                      : depositSuccess || withdrawSuccess
+                      ? "bg-green-500"
+                      : "bg-primary hover:bg-primary/90 shadow-primary/20"
+                  )}
+                >
+                  {isDepositing || isWithdrawing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : depositSuccess || withdrawSuccess ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      Success!
+                    </>
+                  ) : (
+                    <>
+                      {activeTab === 'deposit' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
+                      {activeTab === 'deposit' ? "Add Liquidity" : "Remove Liquidity"}
+                    </>
+                  )}
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            {/* Status Messages */}
+            {(isDepositing || isWithdrawing || approvePending || isApproving) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="text-xs text-center text-gray-500"
+              >
+                {approvePending || isApproving ? "Approving token spending..." : "Transaction in progress..."}
+              </motion.div>
+            )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Right: Info / History */}
         <div className="bg-gray-50 rounded-2xl p-6 md:p-8 border border-border/50">
