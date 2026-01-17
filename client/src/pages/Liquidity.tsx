@@ -384,30 +384,70 @@ export default function Liquidity() {
         </motion.div>
 
         {/* Right: Info / History */}
-        <div className="bg-gray-50 rounded-2xl p-6 md:p-8 border border-border/50">
-          <h3 className="font-bold text-lg mb-4">How it works</h3>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 md:p-8 border border-border/50 shadow-sm"
+        >
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <Percent className="w-5 h-5 text-primary" />
+            How it works
+          </h3>
           <ul className="space-y-4 mb-8">
-            <li className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 text-xs font-bold">1</div>
-              <p className="text-sm text-gray-600">Deposit ETH into the shared liquidity pool used to pay out winning bets.</p>
-            </li>
-            <li className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 text-xs font-bold">2</div>
-              <p className="text-sm text-gray-600">Earn a share of the house edge (typically 3-5%) on every bet placed.</p>
-            </li>
-            <li className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 text-xs font-bold">3</div>
-              <p className="text-sm text-gray-600">Withdraw your initial deposit plus accumulated rewards at any time.</p>
-            </li>
+            {[
+              "Deposit LEAGUE tokens into the shared liquidity pool used to pay out winning bets.",
+              "Earn a share of the house edge (5% protocol fee) on every bet placed.",
+              "Withdraw your initial deposit plus accumulated rewards at any time (0.5% exit fee)."
+            ].map((text, i) => (
+              <motion.li 
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + i * 0.1 }}
+                className="flex gap-3"
+              >
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 text-xs font-bold">
+                  {i + 1}
+                </div>
+                <p className="text-sm text-gray-600">{text}</p>
+              </motion.li>
+            ))}
           </ul>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-             <h4 className="font-bold text-blue-900 text-sm mb-1">Risk Warning</h4>
-             <p className="text-xs text-blue-800/80 leading-relaxed">
+          {/* Pool Stats */}
+          <div className="bg-white border border-border rounded-xl p-4 mb-4">
+            <h4 className="font-bold text-gray-900 text-sm mb-3">Pool Statistics</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Locked Liquidity:</span>
+                <span className="font-mono font-semibold">{formatToken(lockedLiquidity || 0n)} LEAGUE</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Utilization:</span>
+                <span className="font-mono font-semibold">{(Number(utilizationRate || 0n) / 100).toFixed(2)}%</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Withdrawal Fee:</span>
+                <span className="font-mono font-semibold">0.5%</span>
+              </div>
+            </div>
+          </div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="bg-amber-50 border border-amber-200 rounded-xl p-4"
+          >
+             <h4 className="font-bold text-amber-900 text-sm mb-1 flex items-center gap-1">
+               <AlertCircle className="w-4 h-4" />
+               Risk Warning
+             </h4>
+             <p className="text-xs text-amber-800/80 leading-relaxed">
                Liquidity providers act as the counterparty to bettors. While the house has a statistical edge, short-term variance can result in temporary losses to the pool.
              </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );
