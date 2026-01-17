@@ -109,32 +109,110 @@ export default function Season() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 p-8 md:p-12 text-white shadow-xl">
+      {/* Hero Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-primary/20 p-8 md:p-12 text-white shadow-2xl"
+      >
         <div className="absolute top-0 right-0 p-12 opacity-10">
           <Trophy className="w-64 h-64 rotate-12" />
         </div>
         
         <div className="relative z-10 max-w-2xl">
-          <div className="flex items-center gap-2 text-[#D2691E] font-bold tracking-widest uppercase text-sm mb-4">
-             <Star className="w-4 h-4" /> Season 2024/25
-          </div>
-          <h1 className="text-4xl md:text-5xl font-display font-bold mb-6">Predict the Champion</h1>
-          <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex items-center gap-2 text-primary font-bold tracking-widest uppercase text-sm mb-4"
+          >
+             <Star className="w-4 h-4" /> 
+             Season {seasonId ? seasonId.toString() : "..."}
+             {season?.active && (
+               <span className="ml-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">ACTIVE</span>
+             )}
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-4xl md:text-5xl font-display font-bold mb-6"
+          >
+            Predict the Champion
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-gray-300 text-lg mb-8 leading-relaxed"
+          >
             Lock in your prediction for the season winner. The prize pool accumulates until the final whistle. Correct predictions share the entire pot!
-          </p>
+          </motion.p>
           
           <div className="flex flex-wrap gap-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[140px]">
-              <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Prize Pool</p>
-              <p className="text-2xl font-mono font-bold text-[#D2691E]">150.5 ETH</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[140px]">
-              <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Participants</p>
-              <p className="text-2xl font-mono font-bold">1,240</p>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[160px] border border-white/20"
+            >
+              <p className="text-gray-400 text-xs uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Coins className="w-3 h-3" />
+                Prize Pool
+              </p>
+              <p className="text-2xl font-mono font-bold text-primary">
+                {prizePool ? formatToken(prizePool) : "0"} LEAGUE
+              </p>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[160px] border border-white/20"
+            >
+              <p className="text-gray-400 text-xs uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                Participants
+              </p>
+              <p className="text-2xl font-mono font-bold">{totalPredictors.toLocaleString()}</p>
+            </motion.div>
           </div>
+
+          {/* Status Messages */}
+          {hasPredicted && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 bg-blue-500/20 border border-blue-400/30 rounded-xl p-3 text-sm"
+            >
+              <p className="font-semibold">✓ You've made your prediction!</p>
+              <p className="text-blue-200 text-xs mt-1">You predicted: Team #{predictedTeamId}</p>
+            </motion.div>
+          )}
+
+          {canClaim && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 bg-green-500/20 border border-green-400/30 rounded-xl p-3"
+            >
+              <p className="font-semibold text-green-200">🎉 Congratulations! You can claim your prize!</p>
+              <p className="text-green-300 text-xs mt-1">Prize: {formatToken(prizeAmount)} LEAGUE</p>
+            </motion.div>
+          )}
+
+          {predictionsLocked && !hasPredicted && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 bg-amber-500/20 border border-amber-400/30 rounded-xl p-3 text-sm"
+            >
+              <p className="font-semibold">🔒 Predictions are locked</p>
+              <p className="text-amber-200 text-xs mt-1">Season has already started. Wait for next season!</p>
+            </motion.div>
+          )}
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {TEAMS.map((team) => (
