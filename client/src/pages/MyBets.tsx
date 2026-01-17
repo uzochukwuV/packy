@@ -272,27 +272,46 @@ export default function MyBets() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-4"
+      >
         <div>
           <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">My Bets</h1>
-          <p className="text-muted-foreground">Track your betting history and active wagers.</p>
+          <p className="text-muted-foreground">Track your betting history and claim winnings.</p>
         </div>
         {bets.length > 0 && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2 rounded-xl border border-border shadow-sm"
+          >
+            <Ticket className="w-4 h-4 text-primary" />
             <span className="font-bold text-gray-900">{bets.length}</span> total bets
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
-      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden"
+      >
         {loading ? (
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : error ? (
           <div className="p-12 text-center">
-            <p className="text-red-500 mb-2">Error loading bets</p>
+            <p className="text-red-500 mb-2 font-semibold">Error loading bets</p>
             <p className="text-sm text-gray-500">{error}</p>
+            <button
+              onClick={fetchBets}
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         ) : bets.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
@@ -304,8 +323,8 @@ export default function MyBets() {
           </div>
         ) : (
           <>
-            {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 p-4 border-b border-border bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+            {/* Table Header - Hidden on mobile */}
+            <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-border bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
               <div className="col-span-3">Bet Details</div>
               <div className="col-span-2 text-center">Round</div>
               <div className="col-span-2 text-center">Selections</div>
@@ -315,100 +334,18 @@ export default function MyBets() {
             </div>
 
             {/* Table Body */}
-            <div className="divide-y divide-gray-100">
-              {bets.map((bet) => {
-                const stakeAmount = parseFloat(formatToken(BigInt(bet.amount)));
-                const potentialWinnings = parseFloat(formatToken(BigInt(bet.potentialWinnings)));
-                const parlayMultiplier = parseFloat(formatToken(BigInt(bet.parlayMultiplier)));
-
-                return (
-                  <div
-                    key={bet.id}
-                    className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-gray-50/50 transition-colors"
-                  >
-                    {/* Bet Details */}
-                    <div className="col-span-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-gray-400">#{bet.betId}</span>
-                        <a
-                          href={`https://sepolia.etherscan.io/tx/${bet.txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:text-primary/80 transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                      <p className="text-xs text-gray-500">{formatBetDate(bet.placedAt)}</p>
-                    </div>
-
-                    {/* Round */}
-                    <div className="col-span-2 text-center">
-                      <span className="inline-block bg-secondary px-2 py-1 rounded-md text-xs font-medium text-gray-700">
-                        Season {bet.seasonId} • R{bet.roundId}
-                      </span>
-                    </div>
-
-                    {/* Selections */}
-                    <div className="col-span-2 text-center">
-                      <div className="space-y-1">
-                        {bet.matchIndices.length === 1 ? (
-                          <span className="inline-block bg-blue-50 px-2 py-1 rounded text-xs font-medium text-blue-700">
-                            Single: Match {bet.matchIndices[0]} • {getOutcomeLabel(bet.outcomes[0])}
-                          </span>
-                        ) : (
-                          <>
-                            <span className="inline-block bg-purple-50 px-2 py-1 rounded text-xs font-bold text-purple-700">
-                              {bet.matchIndices.length}-Leg Parlay
-                            </span>
-                            <div className="text-[10px] text-gray-500">
-                              {bet.matchIndices.map((idx, i) => (
-                                <span key={i} className="block">
-                                  M{idx}: {getOutcomeLabel(bet.outcomes[i])}
-                                </span>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stake */}
-                    <div className="col-span-2 text-center">
-                      <p className="font-mono text-sm font-bold text-gray-900">
-                        {stakeAmount.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-gray-500">LEAGUE</p>
-                    </div>
-
-                    {/* Status */}
-                    <div className="col-span-2 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(bet.status)}`}>
-                        {bet.status}
-                      </span>
-                      {bet.matchIndices.length > 1 && (
-                        <p className="text-[10px] text-purple-600 mt-1">
-                          {parlayMultiplier.toFixed(2)}x bonus
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Payout */}
-                    <div className="col-span-1 text-right">
-                      <p className={`font-mono text-sm font-bold ${bet.status === 'won' || bet.status === 'claimed' ? 'text-green-600' : bet.status === 'lost' ? 'text-gray-400' : 'text-gray-900'}`}>
-                        {bet.status === 'lost' ? '-' : potentialWinnings.toFixed(2)}
-                      </p>
-                      {bet.status !== 'lost' && (
-                        <p className="text-xs text-gray-500">LEAGUE</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div>
+              {bets.map((bet, index) => (
+                <BetRow
+                  key={bet.id}
+                  bet={bet}
+                  onClaimed={fetchBets}
+                />
+              ))}
             </div>
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
