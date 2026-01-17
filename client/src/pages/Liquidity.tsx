@@ -1,18 +1,85 @@
-import { Coins, TrendingUp, ArrowUpRight, ArrowDownLeft, Lock } from "lucide-react";
-import { useState } from "react";
+import { Coins, TrendingUp, ArrowUpRight, ArrowDownLeft, Lock, Loader2, CheckCircle2, AlertCircle, Percent } from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
+import { 
+  useLiquidityPoolStats, 
+  useUserLPPosition, 
+  useAddLiquidity, 
+  useRemoveLiquidity,
+  usePreviewDeposit,
+  usePreviewWithdrawal
+} from "@/hooks/contracts/useLiquidityPool";
+import { useLeagueBalance, useLeagueAllowance, useApproveLeague } from "@/hooks/contracts/useLeagueToken";
+import { DEPLOYED_ADDRESSES } from "@/contracts/addresses";
+import { formatToken, parseToken } from "@/contracts/types";
+import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Liquidity() {
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState<string>('');
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
+  const { toast } = useToast();
+  const [needsApproval, setNeedsApproval] = useState(false);
 
-  // Mock Stats
+  // Fetch real contract data
+  const { 
+    totalLiquidity, 
+    availableLiquidity, 
+    lockedLiquidity,
+    utilizationRate,
+    isLoading: statsLoading 
+  } = useLiquidityPoolStats();
+  
+  const { 
+    amount: userLPAmount, 
+    shares: userShares,
+    percentage: userPercentage,
+    isLoading: positionLoading 
+  } = useUserLPPosition(address);
+  
+  const { balance: userBalance, formattedBalance } = useLeagueBalance(address);
+  const { data: allowance, refetch: refetchAllowance } = useLeagueAllowance(address);
+  
+  // Preview calculations
+  const amountBigInt = amount ? parseToken(amount) : 0n;
+  const { data: previewShares } = usePreviewDeposit(activeTab === 'deposit' ? amountBigInt : undefined);
+  const { data: previewAmount } = usePreviewWithdrawal(activeTab === 'withdraw' && userShares ? userShares : undefined);
+
+  // Token approval
+  const { approve, isConfirming: isApproving, isSuccess: approveSuccess, isPending: approvePending } = useApproveLeague();
+
+  // Liquidity operations
+  const { addLiquidity, isConfirming: isDepositing, isSuccess: depositSuccess } = useAddLiquidity();
+  const { removeLiquidity, isConfirming: isWithdrawing, isSuccess: withdrawSuccess } = useRemoveLiquidity();
+
+  // Calculate APY (simple estimate based on utilization)
+  const estimatedAPY = utilizationRate ? (Number(utilizationRate) / 100) * 0.05 : 0; // 5% base * utilization
+
+  // Real Stats
   const stats = [
-    { label: "Total Liquidity", value: "1,245.50 ETH", change: "+12.5%", icon: Lock },
-    { label: "Current APY", value: "8.4%", change: "+0.2%", icon: TrendingUp },
-    { label: "My Share", value: "5.25 ETH", change: "0.42%", icon: Coins },
+    { 
+      label: "Total Liquidity", 
+      value: statsLoading ? "..." : `${formatToken(totalLiquidity || 0n)} LEAGUE`,
+      subValue: `Available: ${formatToken(availableLiquidity || 0n)}`,
+      change: `${Number(utilizationRate || 0n) / 100}% Utilized`, 
+      icon: Lock 
+    },
+    { 
+      label: "Est. APY", 
+      value: statsLoading ? "..." : `${estimatedAPY.toFixed(2)}%`,
+      subValue: "Based on pool activity",
+      change: "+Variable", 
+      icon: TrendingUp 
+    },
+    { 
+      label: "My Share", 
+      value: positionLoading ? "..." : `${formatToken(userLPAmount || 0n)} LEAGUE`,
+      subValue: userPercentage ? `${(Number(userPercentage) / 100).toFixed(2)}% of pool` : "0% of pool",
+      change: userShares ? `${formatToken(userShares)} shares` : "No position", 
+      icon: Coins 
+    },
   ];
 
   return (
