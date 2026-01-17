@@ -456,5 +456,145 @@ export async function registerRoutes(
     }
   });
 
+  // ============ Game State Routes (Cached from Database) ============
+
+  /**
+   * Get current game state with time remaining
+   * GET /api/game/state
+   * Returns cached data from database with real-time countdown
+   */
+  app.get('/api/game/state', async (_req, res) => {
+    try {
+      const activeRound = await storage.getActiveRound();
+
+      if (!activeRound) {
+        return res.json({
+          hasActiveRound: false,
+          message: 'No active round',
+        });
+      }
+
+      const now = Date.now();
+      const endTime = activeRound.endTime?.getTime() || 0;
+      const timeRemainingMs = Math.max(0, endTime - now);
+
+      res.json({
+        hasActiveRound: true,
+        round: {
+          roundId: activeRound.roundId,
+          seasonId: activeRound.seasonId,
+          startTime: activeRound.startTime,
+          endTime: activeRound.endTime,
+          timeRemainingMs,
+          isActive: activeRound.isActive && timeRemainingMs > 0,
+          vrfFulfilled: !!activeRound.vrfFulfilledAt,
+          vrfFulfilledAt: activeRound.vrfFulfilledAt,
+          settled: activeRound.settled,
+          settledAt: activeRound.settledAt,
+        },
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get game state'
+      });
+    }
+  });
+
+  /**
+   * Get matches for current active round
+   * GET /api/game/matches
+   */
+  app.get('/api/game/matches', async (_req, res) => {
+    try {
+      const activeRound = await storage.getActiveRound();
+
+      if (!activeRound) {
+        return res.json({
+          hasActiveRound: false,
+          matches: [],
+        });
+      }
+
+      const matches = await storage.getMatchesByRound(activeRound.roundId);
+
+      res.json({
+        hasActiveRound: true,
+        roundId: activeRound.roundId,
+        matches,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get matches'
+      });
+    }
+  });
+
+  /**
+   * Get matches for specific round by ID
+   * GET /api/game/rounds/:roundId/matches
+   */
+  app.get('/api/game/rounds/:roundId/matches', async (req, res) => {
+    try {
+      const { roundId } = req.params;
+
+      const round = await storage.getRoundById(roundId);
+      if (!round) {
+        return res.status(404).json({
+          error: 'Round not found'
+        });
+      }
+
+      const matches = await storage.getMatchesByRound(roundId);
+
+      res.json({
+        round: {
+          roundId: round.roundId,
+          seasonId: round.seasonId,
+          startTime: round.startTime,
+          endTime: round.endTime,
+          isActive: round.isActive,
+          vrfFulfilled: !!round.vrfFulfilledAt,
+          settled: round.settled,
+        },
+        matches,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get round matches'
+      });
+    }
+  });
+
+  /**
+   * Get specific round details
+   * GET /api/game/rounds/:roundId
+   */
+  app.get('/api/game/rounds/:roundId', async (req, res) => {
+    try {
+      const { roundId } = req.params;
+
+      const round = await storage.getRoundById(roundId);
+      if (!round) {
+        return res.status(404).json({
+          error: 'Round not found'
+        });
+      }
+
+      const now = Date.now();
+      const endTime = round.endTime?.getTime() || 0;
+      const timeRemainingMs = Math.max(0, endTime - now);
+
+      res.json({
+        ...round,
+        timeRemainingMs,
+        isActive: round.isActive && timeRemainingMs > 0,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get round'
+      });
+    }
+  });
+
   return httpServer;
 }

@@ -38,3 +38,58 @@ export const insertBetSchema = createInsertSchema(bets).omit({
 
 export type Bet = typeof bets.$inferSelect;
 export type InsertBet = z.infer<typeof insertBetSchema>;
+
+// Rounds table - stores round information synced from blockchain
+export const rounds = pgTable("rounds", {
+  id: serial("id").primaryKey(),
+  roundId: varchar("round_id", { length: 100 }).notNull().unique(), // Blockchain round ID
+  seasonId: varchar("season_id", { length: 100 }).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"), // When round ended (15 mins after start)
+  vrfRequestId: varchar("vrf_request_id", { length: 100 }),
+  vrfFulfilledAt: timestamp("vrf_fulfilled_at"),
+  settled: boolean("settled").notNull().default(false),
+  settledAt: timestamp("settled_at"),
+  isActive: boolean("is_active").notNull().default(true), // Whether betting is still allowed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRoundSchema = createInsertSchema(rounds).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type Round = typeof rounds.$inferSelect;
+export type InsertRound = z.infer<typeof insertRoundSchema>;
+
+// Matches table - stores match results from blockchain
+export const matches = pgTable("matches", {
+  id: serial("id").primaryKey(),
+  roundId: varchar("round_id", { length: 100 }).notNull(),
+  matchIndex: integer("match_index").notNull(), // 0-9 for each round
+  homeTeamId: integer("home_team_id").notNull(),
+  awayTeamId: integer("away_team_id").notNull(),
+  homeTeamName: varchar("home_team_name", { length: 100 }).notNull(),
+  awayTeamName: varchar("away_team_name", { length: 100 }).notNull(),
+  homeScore: integer("home_score"),
+  awayScore: integer("away_score"),
+  outcome: varchar("outcome", { length: 20 }).notNull().default("pending"), // pending, home_win, away_win, draw
+  homeOdds: varchar("home_odds", { length: 100 }), // Initial odds
+  awayOdds: varchar("away_odds", { length: 100 }),
+  drawOdds: varchar("draw_odds", { length: 100 }),
+  settled: boolean("settled").notNull().default(false),
+  settledAt: timestamp("settled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMatchSchema = createInsertSchema(matches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type Match = typeof matches.$inferSelect;
+export type InsertMatch = z.infer<typeof insertMatchSchema>;

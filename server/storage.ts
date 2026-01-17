@@ -1,5 +1,18 @@
 import { db } from "./db";
-import { users, bets, type User, type InsertUser, type Bet, type InsertBet } from "@shared/schema";
+import {
+  users,
+  bets,
+  rounds,
+  matches,
+  type User,
+  type InsertUser,
+  type Bet,
+  type InsertBet,
+  type Round,
+  type InsertRound,
+  type Match,
+  type InsertMatch
+} from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -13,6 +26,18 @@ export interface IStorage {
   getUserBetsByRound(walletAddress: string, roundId: string): Promise<Bet[]>;
   getUserBetsBySeason(walletAddress: string, seasonId: string): Promise<Bet[]>;
   updateBetStatus(betId: string, status: string, settledAt?: Date): Promise<Bet | undefined>;
+
+  // Round operations
+  saveRound(round: InsertRound): Promise<Round>;
+  getRoundById(roundId: string): Promise<Round | undefined>;
+  updateRound(roundId: string, updates: Partial<InsertRound>): Promise<Round | undefined>;
+  getActiveRound(): Promise<Round | undefined>;
+
+  // Match operations
+  saveMatch(match: InsertMatch): Promise<Match>;
+  saveMatches(matches: InsertMatch[]): Promise<Match[]>;
+  getMatchesByRound(roundId: string): Promise<Match[]>;
+  updateMatch(roundId: string, matchIndex: number, updates: Partial<InsertMatch>): Promise<Match | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -74,6 +99,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bets.betId, betId))
       .returning();
     return bet;
+  }
+
+  // ============ Round Operations ============
+
+  async saveRound(insertRound: InsertRound): Promise<Round> {
+    const [round] = await db.insert(rounds).values(insertRound).returning();
+    return round;
+  }
+
+  async getRoundById(roundId: string): Promise<Round | undefined> {
+    const [round] = await db.select().from(rounds).where(eq(rounds.roundId, roundId));
+    return round;
+  }
+
+  async updateRound(roundId: string, updates: Partial<InsertRound>): Promise<Round | undefined> {
+    const [round] = await db
+      .update(rounds)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(rounds.roundId, roundId))
+      .returning();
+    return round;
+  }
+
+  async getActiveRound(): Promise<Round | undefined> {
+    const [round] = await db
+      .select()
+      .from(rounds)
+      .where(eq(rounds.isActive, true))
+      .orderBy(desc(rounds.startTime))
+      .limit(1);
+    return round;
+  }
+
+  // ============ Match Operations ============
+
+  async saveMatch(insertMatch: InsertMatch): Promise<Match> {
+    const [match] = await db.insert(matches).values(insertMatch).returning();
+    return match;
+  }
+
+  async saveMatches(insertMatches: InsertMatch[]): Promise<Match[]> {
+    if (insertMatches.length === 0) return [];
+    return db.insert(matches).values(insertMatches).returning();
+  }
+
+  async getMatchesByRound(roundId: string): Promise<Match[]> {
+    return db
+      .select()
+      .from(matches)
+      .where(eq(matches.roundId, roundId))
+      .orderBy(matches.matchIndex);
+  }
+
+  async updateMatch(roundId: string, matchIndex: number, updates: Partial<InsertMatch>): Promise<Match | undefined> {
+    const [match] = await db
+      .update(matches)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(matches.roundId, roundId), eq(matches.matchIndex, matchIndex)))
+      .returning();
+    return match;
   }
 }
 

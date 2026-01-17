@@ -2,9 +2,11 @@ import { MatchCard } from "@/components/ui/MatchCard";
 import { Loader2, AlertCircle, RefreshCw, Trophy, Target } from "lucide-react";
 import { useDashboardData } from "@/hooks/contracts/useGameEngine";
 import type { Match } from "@/contracts/types";
+import { useChainId } from "wagmi";
 
 export default function Dashboard() {
   // Fetch real-time blockchain data
+  const chainId = useChainId()
   const { seasonId, roundId, season, matches, isSettled, isLoading, isError, refetch } = useDashboardData();
 
   // Loading state
@@ -38,6 +40,7 @@ export default function Dashboard() {
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
+            {chainId}
             Try Again
           </button>
         </div>
@@ -59,7 +62,7 @@ export default function Dashboard() {
                   ? `Season ${seasonId?.toString()} - Completed`
                   : season?.active
                     ? `Season ${seasonId?.toString()} - Active`
-                    : 'No Active Season'}
+                    : 'No Active Season on '} {chainId}
               </h2>
             </div>
             {season?.active && (
@@ -118,6 +121,7 @@ export default function Dashboard() {
             onClick={() => refetch()}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
           >
+            
             <RefreshCw className="w-4 h-4" />
             Refresh Odds
           </button>

@@ -5,6 +5,8 @@
 
 import { publicClient, walletClient, CONTRACTS, MONITORING_CONFIG, log } from './config';
 import { GameEngineABI, BettingPoolABI } from './abis/index';
+import { storage } from '../storage';
+import { startEventListeners, syncRoundStart } from './event-sync';
 
 export interface GameState {
   currentSeasonId: bigint;
@@ -193,7 +195,7 @@ export async function requestMatchResults(enableNativePayment = false): Promise<
       address: CONTRACTS.gameEngine,
       abi: GameEngineABI as any,
       functionName: 'requestMatchResults',
-      args: [], // ABI shows no parameters - needs regeneration
+      args: [enableNativePayment], // ABI shows no parameters - needs regeneration
     });
 
     const txHash = await walletClient.writeContract(request);
@@ -322,9 +324,29 @@ export function startMonitoring() {
 
   log('Starting game monitoring system...');
 
+  // Start blockchain event listeners
+  startEventListeners();
+
+  // Sync current round on startup
+  syncCurrentRoundToDatabase().catch((error: any) => {
+    log(`Failed to sync current round: ${error.message}`, 'error');
+  });
+
   monitoringInterval = setInterval(async () => {
     try {
       const state = await getGameState();
+      const dbRound = state.currentRoundId > 0n
+        ? await storage.getRoundById(state.currentRoundId.toString())
+        : null;
+
+      // Check if round time expired and mark as inactive
+      if (dbRound && state.timeUntilRoundEnd === 0 && dbRound.isActive) {
+        await storage.updateRound(dbRound.roundId, {
+          isActive: false,
+          endTime: new Date(),
+        });
+        log(`⏱️  Round ${dbRound.roundId} betting period ended`);
+      }
 
       // Auto-request VRF if round duration elapsed
       if (state.shouldRequestVRF) {
@@ -343,6 +365,35 @@ export function startMonitoring() {
   }, MONITORING_CONFIG.POLL_INTERVAL_MS);
 
   log('✅ Game monitoring started');
+}
+
+/**
+ * Sync current round to database on startup
+ */
+async function syncCurrentRoundToDatabase() {
+  try {
+    const state = await getGameState();
+
+    if (state.currentRoundId > 0n && state.round) {
+      // Check if round exists in database
+      const existingRound = await storage.getRoundById(state.currentRoundId.toString());
+
+      if (!existingRound) {
+        log(`Syncing current round ${state.currentRoundId} to database...`);
+
+        // Sync the current round
+        await syncRoundStart(
+          state.currentRoundId,
+          state.currentSeasonId,
+          state.round.startTime
+        );
+      } else {
+        log(`Current round ${state.currentRoundId} already in database`);
+      }
+    }
+  } catch (error: any) {
+    log(`Failed to sync current round: ${error.message}`, 'error');
+  }
 }
 
 export function stopMonitoring() {
