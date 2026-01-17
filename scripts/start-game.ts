@@ -7,10 +7,20 @@ const API_BASE = 'http://localhost:5000/api/admin';
 
 async function checkGameState() {
   console.log('📊 Checking current game state...');
-  const response = await fetch(`${API_BASE}/game-state`);
-  const data = await response.json();
-  console.log('Current State:', JSON.stringify(data, null, 2));
-  return data;
+  try {
+    const response = await fetch(`${API_BASE}/game-state`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    console.log('Current State:', JSON.stringify(data, null, 2));
+    return data;
+  } catch (error: any) {
+    if (error.cause?.code === 'ECONNREFUSED') {
+      throw new Error(`Cannot connect to server at ${API_BASE}. Make sure the server is running with "npm run dev"`);
+    }
+    throw error;
+  }
 }
 
 async function startSeason() {
