@@ -82,6 +82,104 @@ export default function Liquidity() {
     },
   ];
 
+  // Check if approval is needed
+  useEffect(() => {
+    if (activeTab === 'deposit' && amount && allowance !== undefined) {
+      const amountInWei = parseToken(amount);
+      setNeedsApproval(allowance < amountInWei);
+    }
+  }, [amount, allowance, activeTab]);
+
+  // Refetch after approval
+  useEffect(() => {
+    if (approveSuccess) {
+      refetchAllowance();
+      toast({
+        title: "Approval Successful! ✓",
+        description: "You can now deposit liquidity.",
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+    }
+  }, [approveSuccess, refetchAllowance, toast]);
+
+  // Handle deposit success
+  useEffect(() => {
+    if (depositSuccess) {
+      toast({
+        title: "Liquidity Added! 🎉",
+        description: `Successfully deposited ${amount} LEAGUE tokens.`,
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+      setAmount('');
+    }
+  }, [depositSuccess, amount, toast]);
+
+  // Handle withdraw success
+  useEffect(() => {
+    if (withdrawSuccess) {
+      toast({
+        title: "Liquidity Withdrawn! 💰",
+        description: `Successfully withdrew liquidity.`,
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+      setAmount('');
+    }
+  }, [withdrawSuccess, toast]);
+
+  const handleApprove = async () => {
+    if (!amount) return;
+    try {
+      const amountInWei = parseToken(amount);
+      // Approve 10x to avoid multiple approvals
+      await approve(amountInWei * 10n);
+    } catch (err: any) {
+      console.error("Approval failed:", err);
+      toast({
+        title: "Approval Failed",
+        description: err.message || "Failed to approve tokens.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeposit = async () => {
+    if (!amount || !isConnected) return;
+    try {
+      const amountInWei = parseToken(amount);
+      await addLiquidity(amountInWei);
+    } catch (err: any) {
+      console.error("Deposit failed:", err);
+      toast({
+        title: "Deposit Failed",
+        description: err.message || "Failed to deposit liquidity.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!userShares || !isConnected) return;
+    try {
+      // Withdraw all shares for simplicity
+      await removeLiquidity(userShares);
+    } catch (err: any) {
+      console.error("Withdrawal failed:", err);
+      toast({
+        title: "Withdrawal Failed",
+        description: err.message || "Failed to withdraw liquidity.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const setMaxAmount = () => {
+    if (activeTab === 'deposit' && userBalance) {
+      setAmount(formatToken(userBalance));
+    } else if (activeTab === 'withdraw' && userLPAmount) {
+      setAmount(formatToken(userLPAmount));
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
@@ -92,16 +190,25 @@ export default function Liquidity() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow">
+          <motion.div 
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white p-6 rounded-2xl border border-border shadow-sm hover:shadow-md transition-all duration-300"
+          >
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-secondary rounded-xl text-primary">
+              <div className="p-3 bg-primary/10 rounded-xl text-primary">
                 <stat.icon className="w-6 h-6" />
               </div>
               <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">{stat.change}</span>
             </div>
             <p className="text-sm text-gray-500 font-medium mb-1">{stat.label}</p>
-            <h3 className="text-2xl font-display font-bold text-gray-900">{stat.value}</h3>
-          </div>
+            <h3 className="text-2xl font-display font-bold text-gray-900 mb-1">{stat.value}</h3>
+            {stat.subValue && (
+              <p className="text-xs text-gray-400">{stat.subValue}</p>
+            )}
+          </motion.div>
         ))}
       </div>
 
