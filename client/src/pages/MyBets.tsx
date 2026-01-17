@@ -222,74 +222,50 @@ export default function MyBets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchBets = async () => {
+    if (!address) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/bets/${address}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch bets');
+      }
+
+      const data = await response.json();
+      setBets(data);
+    } catch (err: any) {
+      console.error('Error fetching bets:', err);
+      setError(err.message || 'Failed to load bets');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBets = async () => {
-      if (!address) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`/api/bets/${address}`);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch bets');
-        }
-
-        const data = await response.json();
-        setBets(data);
-      } catch (err: any) {
-        console.error('Error fetching bets:', err);
-        setError(err.message || 'Failed to load bets');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchBets();
   }, [address]);
-
-  const getOutcomeLabel = (outcome: number) => {
-    if (outcome === 1) return "Home";
-    if (outcome === 2) return "Away";
-    return "Draw";
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'won':
-        return 'bg-green-100 text-green-700';
-      case 'lost':
-        return 'bg-red-100 text-red-700';
-      case 'claimed':
-        return 'bg-blue-100 text-blue-700';
-      default:
-        return 'bg-yellow-100 text-yellow-700';
-    }
-  };
-
-  const formatBetDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return formatDistance(date, new Date(), { addSuffix: true });
-    } catch {
-      return dateString;
-    }
-  };
 
   if (!isConnected) {
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-border shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-border shadow-sm"
+        >
           <Ticket className="w-16 h-16 text-gray-300 mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">Wallet Not Connected</h2>
           <p className="text-gray-500 text-center max-w-md">
             Please connect your wallet to view your betting history.
           </p>
-        </div>
+        </motion.div>
       </div>
     );
   }
