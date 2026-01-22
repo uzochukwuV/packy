@@ -9,13 +9,13 @@ import { privateKeyToAccount } from 'viem/accounts';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Contract addresses on Sepolia (Updated deployment)
+// Contract addresses on Sepolia (V2.5 - January 22, 2026)
 export const CONTRACTS = {
-  leagueToken: '0x3a5465DF90106ee3F43BC1f2bAA3d308d73c93C8' as const,
-  gameEngine: '0x4aa8954aF87dD5644D79346046EeE0EFaFBCb1A3' as const,
-  liquidityPool: '0xDFCb055b55575D2d0D1bFbE5dC96edFFDB852f40' as const,
-  bettingPool: '0x14A1C3Ad99bfd75383AB7744Ea8a72bB678CFadc' as const,
-  seasonPredictor: '0x65aa43a11D824B9A89c221f6A495211F21F20469' as const,
+  leagueToken: '0x48Ce9cAD6130206f733E693cC789Ef56e27d994f' as const,
+  gameEngine: '0x93b78E4b92a7e6b52Ed229C7D592CF41Fd43F459' as const,
+  liquidityPool: '0x54803f1e4aF71b0BFB40E66c2f78C8532D58Fd77' as const,
+  bettingPool: '0xA98052b027818d26374eB46e7FbBCeDde2e19533' as const,
+  seasonPredictor: '0xE75464943564907a2fa160050Af9494EAed39607' as const,
 } as const;
 
 
@@ -62,8 +62,8 @@ export const MONITORING_CONFIG = {
   // Check game state every 30 seconds
   POLL_INTERVAL_MS: 30 * 1000,
 
-  // Round duration from contract (15 minutes)
-  ROUND_DURATION_MS: 15 * 60 * 1000,
+  // Round duration from contract (3 hours - UPDATED in V2.5)
+  ROUND_DURATION_MS: 3 * 60 * 60 * 1000,
 
   // Auto-settle delay after VRF request (5 minutes)
   VRF_SETTLEMENT_DELAY_MS: 5 * 60 * 1000,

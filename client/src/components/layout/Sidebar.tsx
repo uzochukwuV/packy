@@ -1,20 +1,22 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Coins, History, Trophy, Wallet, Droplet, CheckCircle, Loader2, Clock } from "lucide-react";
+import { LayoutDashboard, Coins, History, Trophy, Wallet, Droplet, CheckCircle, Loader2, Clock, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected, metaMask } from "wagmi/connectors";
 import { useLeagueBalance } from "@/hooks/contracts/useLeagueToken";
 import { useFaucet } from "@/hooks/useFaucet";
+import { useUserPoints } from "@/hooks/usePoints";
 import { useState } from "react";
 import { sepolia } from "wagmi/chains";
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { address, isConnected, chainId } = useAccount();
+  const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { balanceFloat, formattedBalance, refetch } = useLeagueBalance(address);
+  const { balanceFloat, refetch } = useLeagueBalance(address);
   const { requestTokens, isLoading, error } = useFaucet();
+  const { data: userPoints } = useUserPoints(address);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const navItems = [
@@ -23,6 +25,7 @@ export function Sidebar() {
     { label: "My Bets", icon: History, href: "/my-bets" },
     { label: "Round History", icon: Clock, href: "/history" },
     { label: "Season Predictor", icon: Trophy, href: "/season" },
+    { label: "Leaderboard", icon: Award, href: "/leaderboard" },
   ];
 
   const handleWalletClick = () => {
@@ -70,6 +73,23 @@ export function Sidebar() {
       </div>
 
       <div className="mt-auto p-6 border-t border-gray-200 space-y-3">
+        {/* Points Display */}
+        {isConnected && userPoints && (
+          <div className="bg-gradient-to-br from-yellow-400/20 to-orange-400/10 rounded-xl p-4 border border-yellow-400/30">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Testnet Points</span>
+              <Award className="w-4 h-4 text-yellow-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 font-mono">
+              {userPoints.totalPoints.toLocaleString()}
+            </div>
+            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+              <span>{userPoints.betsPlaced} bets</span>
+              <span>{userPoints.betsWon} won</span>
+            </div>
+          </div>
+        )}
+
         {/* LEAGUE Balance Display */}
         {isConnected && (
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-4 border border-primary/20">

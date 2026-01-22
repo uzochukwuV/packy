@@ -146,6 +146,125 @@ export function useUtilizationRate() {
   });
 }
 
+/**
+ * Get borrowed funds for pool balancing
+ */
+export function useBorrowedForPoolBalancing() {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'borrowedForPoolBalancing',
+    chainId: sepolia.id,
+    query: {
+      refetchInterval: 10000,
+    },
+  });
+}
+
+/**
+ * Get LP's comprehensive position (V2.5 - NEW)
+ * Returns: initialDeposit, totalWithdrawn, currentValue, profitLoss, roiBPS, depositTimestamp
+ */
+export function useLPPosition(address: `0x${string}` | undefined) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'getLPPosition',
+    args: address ? [address] : undefined,
+    chainId: sepolia.id,
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000,
+    },
+  });
+}
+
+/**
+ * Get LP's profit/loss summary (V2.5 - NEW)
+ * Returns: netDeposit, currentValue, unrealizedPL, realizedPL
+ */
+export function useLPProfitLoss(address: `0x${string}` | undefined) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'getLPProfitLoss',
+    args: address ? [address] : undefined,
+    chainId: sepolia.id,
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000,
+    },
+  });
+}
+
+/**
+ * Get LP's detailed position with risk metrics (V2.5 - NEW)
+ * Returns: initialDeposit, totalWithdrawn, currentValue, realizedValue, atRiskAmount, profitLoss, roiBPS
+ */
+export function useLPPositionDetailed(address: `0x${string}` | undefined) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'getLPPositionDetailed',
+    args: address ? [address] : undefined,
+    chainId: sepolia.id,
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000,
+    },
+  });
+}
+
+/**
+ * Get maximum withdrawable amount for LP (V2.5 - NEW)
+ * Returns: maxWithdrawable, totalValue
+ */
+export function useMaxWithdrawableAmount(address: `0x${string}` | undefined) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'getMaxWithdrawableAmount',
+    args: address ? [address] : undefined,
+    chainId: sepolia.id,
+    query: {
+      enabled: !!address,
+      refetchInterval: 5000, // More frequent for withdrawal UI
+    },
+  });
+}
+
+/**
+ * Check if pool can cover a specific payout
+ */
+export function useCanCoverPayout(amount: bigint | undefined) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'canCoverPayout',
+    args: amount !== undefined ? [amount] : undefined,
+    chainId: sepolia.id,
+    query: {
+      enabled: amount !== undefined && amount > 0n,
+    },
+  });
+}
+
+/**
+ * Check if address is an active LP
+ */
+export function useIsActiveLP(address: `0x${string}` | undefined) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.liquidityPool,
+    abi: LiquidityPoolABI,
+    functionName: 'isActiveLP',
+    args: address ? [address] : undefined,
+    chainId: sepolia.id,
+    query: {
+      enabled: !!address,
+    },
+  });
+}
+
 // ============ Write Hooks ============
 
 /**
@@ -191,6 +310,32 @@ export function useRemoveLiquidity() {
 
   return {
     removeLiquidity,
+    hash,
+    isConfirming,
+    isSuccess,
+    ...rest,
+  };
+}
+
+/**
+ * Partial withdrawal from pool (V2.5 - NEW)
+ * Withdraw specific amount instead of burning shares
+ */
+export function usePartialWithdrawal() {
+  const { writeContract, data: hash, ...rest } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const partialWithdrawal = (amount: bigint) => {
+    writeContract({
+      address: DEPLOYED_ADDRESSES.liquidityPool,
+      abi: LiquidityPoolABI,
+      functionName: 'partialWithdrawal',
+      args: [amount],
+    });
+  };
+
+  return {
+    partialWithdrawal,
     hash,
     isConfirming,
     isSuccess,

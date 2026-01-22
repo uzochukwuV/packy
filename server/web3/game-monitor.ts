@@ -352,9 +352,9 @@ export function startMonitoring() {
   // Start blockchain event listeners
   startEventListeners();
 
-  // Sync current round on startup
-  syncCurrentRoundToDatabase().catch((error: any) => {
-    log(`Failed to sync current round: ${error.message}`, 'error');
+  // Initialize game on startup (check if season/round need to be started)
+  initializeGame().catch((error: any) => {
+    log(`Failed to initialize game: ${error.message}`, 'error');
   });
 
   monitoringInterval = setInterval(async () => {
@@ -363,6 +363,36 @@ export function startMonitoring() {
       const dbRound = state.currentRoundId > 0n
         ? await storage.getRoundById(state.currentRoundId.toString())
         : null;
+
+      // Auto-start season if no season exists (fresh contract)
+      if (state.currentSeasonId === 0n) {
+        log('No active season found. Auto-starting season...', 'warn');
+        const result = await startSeason();
+        if (result.success) {
+          log('✅ Season auto-started successfully');
+          // Wait a bit for season to be confirmed, then start first round
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          const roundResult = await startRound();
+          if (roundResult.success) {
+            log('✅ First round auto-started successfully');
+            // Seed the first round
+            await seedRoundPools(1n);
+          }
+        }
+        return; // Skip rest of monitoring this cycle
+      }
+
+      // Auto-start round if season exists but no round (shouldn't happen normally)
+      if (state.currentSeasonId > 0n && state.currentRoundId === 0n && state.season?.active) {
+        log('Active season found but no round. Auto-starting round...', 'warn');
+        const result = await startRound();
+        if (result.success) {
+          log('✅ Round auto-started successfully');
+          const newRoundId = state.currentRoundId + 1n;
+          await seedRoundPools(newRoundId);
+        }
+        return;
+      }
 
       // Check if round time expired and mark as inactive
       if (dbRound && state.timeUntilRoundEnd === 0 && dbRound.isActive) {
@@ -437,31 +467,79 @@ export function startMonitoring() {
 }
 
 /**
- * Sync current round to database on startup
+ * Initialize game on startup - start season and round if needed
  */
-async function syncCurrentRoundToDatabase() {
+async function initializeGame() {
   try {
     const state = await getGameState();
 
+    // Case 1: No season exists (fresh contract) - start season and first round
+    if (state.currentSeasonId === 0n) {
+      log('🚀 Fresh contract detected. Starting season and first round...', 'warn');
+
+      const seasonResult = await startSeason();
+      if (!seasonResult.success) {
+        log(`Failed to start season: ${seasonResult.error}`, 'error');
+        return;
+      }
+
+      log('✅ Season 1 started');
+
+      // Wait for season transaction to be confirmed
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      const roundResult = await startRound();
+      if (!roundResult.success) {
+        log(`Failed to start first round: ${roundResult.error}`, 'error');
+        return;
+      }
+
+      log('✅ Round 1 started');
+
+      // Seed the first round
+      await seedRoundPools(1n);
+      log('✅ Round 1 pools seeded');
+
+      return;
+    }
+
+    // Case 2: Season exists but no round - start first round of season
+    if (state.currentSeasonId > 0n && state.currentRoundId === 0n && state.season?.active) {
+      log('Active season found but no round. Starting first round...', 'warn');
+
+      const roundResult = await startRound();
+      if (!roundResult.success) {
+        log(`Failed to start round: ${roundResult.error}`, 'error');
+        return;
+      }
+
+      log('✅ Round started');
+      await seedRoundPools(1n);
+      log('✅ Round pools seeded');
+
+      return;
+    }
+
+    // Case 3: Round exists - sync to database if not already there
     if (state.currentRoundId > 0n && state.round) {
-      // Check if round exists in database
       const existingRound = await storage.getRoundById(state.currentRoundId.toString());
 
       if (!existingRound) {
         log(`Syncing current round ${state.currentRoundId} to database...`);
-
-        // Sync the current round
         await syncRoundStart(
           state.currentRoundId,
           state.currentSeasonId,
           state.round.startTime
         );
+        log(`✅ Round ${state.currentRoundId} synced to database`);
       } else {
-        log(`Current round ${state.currentRoundId} already in database`);
+        log(`✅ Round ${state.currentRoundId} already in database`);
       }
     }
+
+    log('✅ Game initialization complete');
   } catch (error: any) {
-    log(`Failed to sync current round: ${error.message}`, 'error');
+    log(`Failed to initialize game: ${error.message}`, 'error');
   }
 }
 

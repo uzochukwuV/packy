@@ -4,6 +4,8 @@ import {
   bets,
   rounds,
   matches,
+  userPoints,
+  pointsHistory,
   type User,
   type InsertUser,
   type Bet,
@@ -11,9 +13,13 @@ import {
   type Round,
   type InsertRound,
   type Match,
-  type InsertMatch
+  type InsertMatch,
+  type UserPoints,
+  type InsertUserPoints,
+  type PointsHistory,
+  type InsertPointsHistory
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
@@ -41,6 +47,14 @@ export interface IStorage {
   saveMatches(matches: InsertMatch[]): Promise<Match[]>;
   getMatchesByRound(roundId: string): Promise<Match[]>;
   updateMatch(roundId: string, matchIndex: number, updates: Partial<InsertMatch>): Promise<Match | undefined>;
+
+  // Points operations
+  getUserPoints(walletAddress: string): Promise<UserPoints | undefined>;
+  initializeUserPoints(walletAddress: string): Promise<UserPoints>;
+  awardBetPlacedPoints(walletAddress: string, betId: string): Promise<void>;
+  awardBetWonPoints(walletAddress: string, betId: string): Promise<void>;
+  getPointsHistory(walletAddress: string, limit?: number): Promise<PointsHistory[]>;
+  getLeaderboard(limit?: number): Promise<UserPoints[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -187,6 +201,107 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(matches.roundId, roundId), eq(matches.matchIndex, matchIndex)))
       .returning();
     return match;
+  }
+
+  // ============ Points Operations ============
+
+  async getUserPoints(walletAddress: string): Promise<UserPoints | undefined> {
+    const [points] = await db
+      .select()
+      .from(userPoints)
+      .where(eq(userPoints.walletAddress, walletAddress));
+    return points;
+  }
+
+  async initializeUserPoints(walletAddress: string): Promise<UserPoints> {
+    try {
+      const [points] = await db
+        .insert(userPoints)
+        .values({
+          walletAddress,
+          totalPoints: 0,
+          betsPlaced: 0,
+          betsWon: 0,
+        })
+        .returning();
+      return points;
+    } catch (error: any) {
+      // If user already exists (unique constraint violation), fetch and return
+      if (error.code === '23505') {
+        const existing = await this.getUserPoints(walletAddress);
+        if (existing) return existing;
+      }
+      throw error;
+    }
+  }
+
+  async awardBetPlacedPoints(walletAddress: string, betId: string): Promise<void> {
+    // Ensure user has a points record
+    let userPointsRecord = await this.getUserPoints(walletAddress);
+    if (!userPointsRecord) {
+      userPointsRecord = await this.initializeUserPoints(walletAddress);
+    }
+
+    // Award 1 point for placing a bet
+    await db
+      .update(userPoints)
+      .set({
+        totalPoints: sql`${userPoints.totalPoints} + 1`,
+        betsPlaced: sql`${userPoints.betsPlaced} + 1`,
+        lastUpdated: new Date(),
+      })
+      .where(eq(userPoints.walletAddress, walletAddress));
+
+    // Record in history
+    await db.insert(pointsHistory).values({
+      walletAddress,
+      betId,
+      points: 1,
+      reason: 'bet_placed',
+    });
+  }
+
+  async awardBetWonPoints(walletAddress: string, betId: string): Promise<void> {
+    // Ensure user has a points record
+    let userPointsRecord = await this.getUserPoints(walletAddress);
+    if (!userPointsRecord) {
+      userPointsRecord = await this.initializeUserPoints(walletAddress);
+    }
+
+    // Award 10 points for winning a bet
+    await db
+      .update(userPoints)
+      .set({
+        totalPoints: sql`${userPoints.totalPoints} + 10`,
+        betsWon: sql`${userPoints.betsWon} + 1`,
+        lastUpdated: new Date(),
+      })
+      .where(eq(userPoints.walletAddress, walletAddress));
+
+    // Record in history
+    await db.insert(pointsHistory).values({
+      walletAddress,
+      betId,
+      points: 10,
+      reason: 'bet_won',
+    });
+  }
+
+  async getPointsHistory(walletAddress: string, limit: number = 50): Promise<PointsHistory[]> {
+    return db
+      .select()
+      .from(pointsHistory)
+      .where(eq(pointsHistory.walletAddress, walletAddress))
+      .orderBy(desc(pointsHistory.createdAt))
+      .limit(limit);
+  }
+
+  async getLeaderboard(limit: number = 100): Promise<UserPoints[]> {
+    return db
+      .select()
+      .from(userPoints)
+      .orderBy(desc(userPoints.totalPoints))
+      .limit(limit);
   }
 }
 

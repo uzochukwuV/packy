@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Trophy, Zap, Shield, Coins, Target, Clock, ArrowRight, CheckCircle2, TrendingUp } from "lucide-react";
+import { Trophy, Zap, Shield, Coins, Target, Clock, ArrowRight, CheckCircle2, TrendingUp, Award } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Home() {
@@ -111,6 +111,12 @@ export default function Home() {
                 description: "Dynamic odds based on team performance and betting patterns. Get the best value for your predictions.",
                 color: "bg-indigo-500",
               },
+              {
+                icon: Award,
+                title: "Testnet Rewards",
+                description: "Earn points for every bet placed and won. Top players get exclusive rewards when we launch on mainnet!",
+                color: "bg-yellow-600",
+              },
             ].map((feature, index) => (
               <motion.div
                 key={index}
@@ -172,7 +178,7 @@ export default function Home() {
               {
                 step: "4",
                 title: "Claim Winnings",
-                description: "Wait 15 minutes for results. If you win, claim your payout instantly from the My Bets page.",
+                description: "Wait 3 hours for results. If you win, claim your payout instantly from the My Bets page.",
                 icon: Trophy,
               },
             ].map((step, index) => (
@@ -241,7 +247,7 @@ export default function Home() {
                     <ul className="space-y-2 text-gray-700">
                       <li className="flex items-start gap-2">
                         <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                        <span>Each round lasts <strong>15 minutes</strong> for betting</span>
+                        <span>Each round lasts <strong>3 hours</strong> for betting</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />

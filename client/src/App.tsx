@@ -11,6 +11,7 @@ import Liquidity from "@/pages/Liquidity";
 import MyBets from "@/pages/MyBets";
 import Season from "@/pages/Season";
 import History from "@/pages/History";
+import Leaderboard from "@/pages/Leaderboard";
 import RoundResults from "@/pages/RoundResults";
 import NotFound from "@/pages/not-found";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -48,6 +49,11 @@ function Router() {
       <Route path="/history">
         <MainLayout>
           <History />
+        </MainLayout>
+      </Route>
+      <Route path="/leaderboard">
+        <MainLayout>
+          <Leaderboard />
         </MainLayout>
       </Route>
       <Route path="/rounds/:roundId">

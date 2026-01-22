@@ -1,22 +1,29 @@
 /**
  * Smart Contract Addresses
- * Deployed on Sepolia Testnet
+ * Deployed on Sepolia Testnet - V2.5 (January 22, 2026)
+ *
+ * KEY UPDATES in V2.5:
+ * - Round duration: 15 minutes → 3 hours
+ * - Unified LP pool model with 5% protocol fee
+ * - Reduced parlay multipliers (1.0x - 1.25x)
+ * - Count-based parlay tiers for FOMO mechanics
+ * - Enhanced liquidity pool with AMM-style shares
  */
 
 export const DEPLOYED_ADDRESSES = {
-  leagueToken: '0x3a5465DF90106ee3F43BC1f2bAA3d308d73c93C8' as const,
-  gameEngine: '0x4aa8954aF87dD5644D79346046EeE0EFaFBCb1A3' as const,
-  liquidityPool: '0xDFCb055b55575D2d0D1bFbE5dC96edFFDB852f40' as const,
-  bettingPool: '0x14A1C3Ad99bfd75383AB7744Ea8a72bB678CFadc' as const,
-  seasonPredictor: '0x65aa43a11D824B9A89c221f6A495211F21F20469' as const,
+  leagueToken: '0x48Ce9cAD6130206f733E693cC789Ef56e27d994f' as const,
+  gameEngine: '0x93b78E4b92a7e6b52Ed229C7D592CF41Fd43F459' as const,
+  liquidityPool: '0x54803f1e4aF71b0BFB40E66c2f78C8532D58Fd77' as const,
+  bettingPool: '0xA98052b027818d26374eB46e7FbBCeDde2e19533' as const,
+  seasonPredictor: '0xE75464943564907a2fa160050Af9494EAed39607' as const,
 } as const;
 
 export type ContractAddresses = typeof DEPLOYED_ADDRESSES;
 
 
-// === DEPLOYMENT SUMMARY ===
-//   LeagueToken: 0x3a5465DF90106ee3F43BC1f2bAA3d308d73c93C8
-//   GameEngine: 0x4aa8954aF87dD5644D79346046EeE0EFaFBCb1A3
-//   LiquidityPool: 0xDFCb055b55575D2d0D1bFbE5dC96edFFDB852f40
-//   BettingPool: 0x14A1C3Ad99bfd75383AB7744Ea8a72bB678CFadc
-//   SeasonPredictor: 0x65aa43a11D824B9A89c221f6A495211F21F20469
+// === DEPLOYMENT SUMMARY (V2.5) ===
+//   LeagueToken: 0x48Ce9cAD6130206f733E693cC789Ef56e27d994f
+//   GameEngine: 0x93b78E4b92a7e6b52Ed229C7D592CF41Fd43F459
+//   LiquidityPool: 0x54803f1e4aF71b0BFB40E66c2f78C8532D58Fd77
+//   BettingPool: 0xA98052b027818d26374eB46e7FbBCeDde2e19533
+//   SeasonPredictor: 0xE75464943564907a2fa160050Af9494EAed39607

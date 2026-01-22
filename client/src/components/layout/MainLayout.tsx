@@ -1,6 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { BetSlip } from "./BetSlip";
-import { Menu, Zap, Shield, Calendar, Info } from "lucide-react";
+import { Menu, Zap, Shield, Calendar, Info, Award } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
@@ -16,6 +16,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { label: "Liquidity Pool", icon: Coins, href: "/liquidity" },
     { label: "My Bets", icon: History, href: "/my-bets" },
     { label: "Season Predictor", icon: Trophy, href: "/season" },
+    { label: "Leaderboard", icon: Award, href: "/leaderboard" },
   ];
 
   return (

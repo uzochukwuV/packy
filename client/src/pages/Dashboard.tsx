@@ -25,7 +25,7 @@ export default function Dashboard() {
       return;
     }
 
-    const ROUND_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+    const ROUND_DURATION_MS = 3 * 60 * 60 * 1000; // 3 hours (V2.5 update)
     const roundStartTime = Number(round.startTime) * 1000; // Convert to milliseconds
     const roundEndTime = roundStartTime + ROUND_DURATION_MS;
 
@@ -221,7 +221,7 @@ export default function Dashboard() {
       {!isSettled && !isBettingActive && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-sm text-red-800">
-            <strong>Betting Period Ended:</strong> The 15-minute betting window has closed. Waiting for match results to be generated...
+            <strong>Betting Period Ended:</strong> The 3-hour betting window has closed. Waiting for match results to be generated...
           </p>
         </div>
       )}

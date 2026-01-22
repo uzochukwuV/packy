@@ -76,7 +76,7 @@ export async function syncRoundStart(roundId: bigint, seasonId: bigint, startTim
 
     // Save round to database
     const roundStartDate = new Date(Number(startTime) * 1000);
-    const roundEndDate = new Date(Number(startTime) * 1000 + 15 * 60 * 1000); // 15 minutes later
+    const roundEndDate = new Date(Number(startTime) * 1000 + 3 * 60 * 60 * 1000); // 3 hours later (V2.5)
 
     await storage.saveRound({
       roundId: roundId.toString(),
@@ -215,6 +215,12 @@ async function updateBetStatusesForRound(roundId: bigint) {
         // Update bet status in database
         await storage.updateBetStatus(bet.betId, newStatus, new Date());
 
+        // Award points for winning bet
+        if (isWon) {
+          await storage.awardBetWonPoints(bet.bettor, bet.betId);
+          log(`Awarded 10 points to ${bet.bettor} for winning bet ${bet.betId}`);
+        }
+
         log(`Updated bet ${bet.betId}: ${newStatus}`);
       } catch (betError: any) {
         log(`Failed to update bet ${bet.betId}: ${betError.message}`, 'error');
@@ -268,7 +274,10 @@ async function syncBetPlaced(
       txHash: '0x', // Will be updated from transaction logs if needed
     });
 
-    log(`✅ Bet ${betId} synced to database`);
+    // Award 1 point for placing a bet
+    await storage.awardBetPlacedPoints(bettor, betId.toString());
+
+    log(`✅ Bet ${betId} synced to database and 1 point awarded`);
   } catch (error: any) {
     // Ignore duplicate key errors since they're harmless
     if (error.message && error.message.includes('duplicate key')) {

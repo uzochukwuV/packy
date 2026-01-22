@@ -659,6 +659,79 @@ export async function registerRoutes(
     }
   });
 
+  // ============ Points System Routes ============
+  // IMPORTANT: More specific routes must come BEFORE parameterized routes
+
+  /**
+   * Get leaderboard
+   * GET /api/points/leaderboard
+   * Query params: ?limit=100
+   */
+  app.get('/api/points/leaderboard', async (req, res) => {
+    try {
+      const { limit = '100' } = req.query;
+
+      const leaderboard = await storage.getLeaderboard(parseInt(limit as string));
+
+      return res.json(leaderboard);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get leaderboard'
+      });
+    }
+  });
+
+  /**
+   * Get user's points history
+   * GET /api/points/:address/history
+   * Query params: ?limit=50
+   */
+  app.get('/api/points/:address/history', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { limit = '50' } = req.query;
+
+      if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({ error: 'Invalid Ethereum address' });
+      }
+
+      const history = await storage.getPointsHistory(address, parseInt(limit as string));
+
+      return res.json(history);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get points history'
+      });
+    }
+  });
+
+  /**
+   * Get user's points and stats
+   * GET /api/points/:address
+   */
+  app.get('/api/points/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+
+      if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return res.status(400).json({ error: 'Invalid Ethereum address' });
+      }
+
+      let userPoints = await storage.getUserPoints(address);
+
+      // Initialize if doesn't exist
+      if (!userPoints) {
+        userPoints = await storage.initializeUserPoints(address);
+      }
+
+      return res.json(userPoints);
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error.message || 'Failed to get user points'
+      });
+    }
+  });
+
   /**
    * Get round results with matches and all bets
    * GET /api/game/rounds/:roundId/results

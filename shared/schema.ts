@@ -93,3 +93,41 @@ export const insertMatchSchema = createInsertSchema(matches).omit({
 
 export type Match = typeof matches.$inferSelect;
 export type InsertMatch = z.infer<typeof insertMatchSchema>;
+
+// Points table - tracks testnet user rewards
+export const userPoints = pgTable("user_points", {
+  id: serial("id").primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 42 }).notNull().unique(),
+  totalPoints: integer("total_points").notNull().default(0),
+  betsPlaced: integer("bets_placed").notNull().default(0), // Total bets placed
+  betsWon: integer("bets_won").notNull().default(0), // Total bets won
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserPointsSchema = createInsertSchema(userPoints).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true
+});
+
+export type UserPoints = typeof userPoints.$inferSelect;
+export type InsertUserPoints = z.infer<typeof insertUserPointsSchema>;
+
+// Points history table - tracks individual point transactions
+export const pointsHistory = pgTable("points_history", {
+  id: serial("id").primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 42 }).notNull(),
+  betId: varchar("bet_id", { length: 100 }), // Optional - related bet if applicable
+  points: integer("points").notNull(), // Points awarded (1 for bet placed, 10 for win)
+  reason: varchar("reason", { length: 50 }).notNull(), // 'bet_placed' or 'bet_won'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPointsHistorySchema = createInsertSchema(pointsHistory).omit({
+  id: true,
+  createdAt: true
+});
+
+export type PointsHistory = typeof pointsHistory.$inferSelect;
+export type InsertPointsHistory = z.infer<typeof insertPointsHistorySchema>;
