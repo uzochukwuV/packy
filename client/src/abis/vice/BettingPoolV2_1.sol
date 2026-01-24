@@ -502,7 +502,8 @@ contract BettingPoolV2_1 is Ownable, ReentrancyGuard {
             pool.totalPool = homeSeed + awaySeed + drawSeed;
 
             totalSeedAmount += pool.totalPool;
-            accounting.totalBetVolume += pool.totalPool;
+            // REMOVED: Don't add seeds to totalBetVolume (causes double-counting with protocolSeedAmount)
+            // Seeds are tracked separately in protocolSeedAmount
         }
 
         // Request seeding from LP pool
@@ -699,10 +700,12 @@ contract BettingPoolV2_1 is Ownable, ReentrancyGuard {
         require(currentRoundId > 0, "No active round");
         require(!gameEngine.isRoundSettled(currentRoundId), "Round already settled");
 
+        // CRITICAL: Prevent betting before round is seeded
+        RoundAccounting storage accounting = roundAccounting[currentRoundId];
+        require(accounting.seeded, "Round not seeded - odds not locked yet");
+
         // Transfer user's stake using SafeERC20
         leagueToken.safeTransferFrom(msg.sender, address(this), amount);
-
-        RoundAccounting storage accounting = roundAccounting[currentRoundId];
 
         // Deduct 5% protocol fee
         uint256 protocolFee = (amount * PROTOCOL_FEE) / 10000;
@@ -959,19 +962,30 @@ contract BettingPoolV2_1 is Ownable, ReentrancyGuard {
         uint256 seasonShare = 0;
 
         if (remainingInContract > 0) {
-            // Season pool gets exactly 2% of ACTUAL USER DEPOSITS (not including LP borrowed)
-            uint256 totalUserBetsBeforeFee = accounting.totalUserDeposits + accounting.protocolFeeCollected;
-            seasonShare = (totalUserBetsBeforeFee * 200) / 10000; // 2%
+            // STEP 1: Return borrowed funds FIRST (these were loans, not profits)
+            if (accounting.lpBorrowedForBets > 0 && remainingInContract > 0) {
+                uint256 toReturnBorrowed = accounting.lpBorrowedForBets;
+                if (toReturnBorrowed > remainingInContract) {
+                    toReturnBorrowed = remainingInContract; // Return what we can
+                }
+
+                leagueToken.safeTransfer(address(liquidityPoolV2), toReturnBorrowed);
+                liquidityPoolV2.returnSeedFunds(toReturnBorrowed);
+                remainingInContract -= toReturnBorrowed;
+            }
+
+            // STEP 2: Calculate season share (2% of user deposits AFTER fees, not before)
+            seasonShare = (accounting.totalUserDeposits * 200) / 10000; // 2% of amountAfterFee
 
             // Cap seasonShare to what's actually available
             if (seasonShare > remainingInContract) {
                 seasonShare = remainingInContract;
             }
 
-            // LP gets everything else
+            // STEP 3: LP gets everything else (remaining balance after borrowed + season)
             profitToLP = remainingInContract - seasonShare;
 
-            // Transfer LP's share back to LP pool
+            // Transfer LP's profit share back to LP pool
             if (profitToLP > 0) {
                 leagueToken.safeTransfer(address(liquidityPoolV2), profitToLP);
                 // Update LP liquidity tracking
@@ -1372,10 +1386,20 @@ contract BettingPoolV2_1 is Ownable, ReentrancyGuard {
         pure
         returns (uint256)
     {
-        // Pessimistic estimate: assume best case odds (2x per match in worst case)
-        uint256 maxBasePayout = amount * (2 ** numMatches);
+        // Calculate 2^numMatches with overflow protection
+        uint256 multiplier = 1;
+        for (uint256 i = 0; i < numMatches; i++) {
+            // Check for overflow before multiplying by 2
+            require(multiplier <= type(uint256).max / 2, "Payout calculation overflow");
+            multiplier *= 2;
+        }
 
-        // Apply parlay multiplier
+        // Check for overflow before multiplying amount
+        require(amount <= type(uint256).max / multiplier, "Bet amount too large");
+        uint256 maxBasePayout = amount * multiplier;
+
+        // Apply parlay multiplier with overflow check
+        require(maxBasePayout <= type(uint256).max / parlayMultiplier, "Parlay overflow");
         uint256 maxFinalPayout = (maxBasePayout * parlayMultiplier) / 1e18;
 
         // Apply per-bet cap
@@ -1708,6 +1732,66 @@ contract BettingPoolV2_1 is Ownable, ReentrancyGuard {
         (won, basePayout, finalPayout) = _calculateBetPayout(betId);
         parlayMultiplier = bets[betId].lockedMultiplier;  // Use locked multiplier
         return (won, basePayout, finalPayout, parlayMultiplier);
+    }
+
+    // ============ Odds Query Functions ============
+
+    /**
+     * @notice Get locked odds for a specific match in a round
+     * @param roundId The round ID
+     * @param matchIndex The match index (0-9)
+     * @return homeOdds Home win odds (1e18 format, e.g., 1.3e18 = 1.3x)
+     * @return awayOdds Away win odds (1e18 format)
+     * @return drawOdds Draw odds (1e18 format)
+     * @return locked Whether odds are locked (seeded)
+     */
+    function getMatchOdds(uint256 roundId, uint256 matchIndex)
+        external
+        view
+        returns (uint256 homeOdds, uint256 awayOdds, uint256 drawOdds, bool locked)
+    {
+        require(matchIndex < 10, "Invalid match index");
+        LockedOdds storage odds = roundAccounting[roundId].lockedMatchOdds[matchIndex];
+        return (odds.homeOdds, odds.awayOdds, odds.drawOdds, odds.locked);
+    }
+
+    /**
+     * @notice Get all locked odds for a round (for frontend)
+     * @param roundId The round ID
+     * @return matchOdds Array of odds for all 10 matches
+     */
+    struct MatchOddsView {
+        uint256 homeOdds;
+        uint256 awayOdds;
+        uint256 drawOdds;
+        bool locked;
+    }
+
+    function getRoundOdds(uint256 roundId)
+        external
+        view
+        returns (MatchOddsView[10] memory matchOdds)
+    {
+        RoundAccounting storage accounting = roundAccounting[roundId];
+        for (uint256 i = 0; i < 10; i++) {
+            LockedOdds storage odds = accounting.lockedMatchOdds[i];
+            matchOdds[i] = MatchOddsView({
+                homeOdds: odds.homeOdds,
+                awayOdds: odds.awayOdds,
+                drawOdds: odds.drawOdds,
+                locked: odds.locked
+            });
+        }
+        return matchOdds;
+    }
+
+    /**
+     * @notice Check if round is seeded and ready for betting
+     * @param roundId The round ID
+     * @return seeded Whether the round has been seeded
+     */
+    function isRoundSeeded(uint256 roundId) external view returns (bool) {
+        return roundAccounting[roundId].seeded;
     }
 
     // ============ Season Reward Management (H-2 Fix) ============

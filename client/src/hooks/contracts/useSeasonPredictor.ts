@@ -5,9 +5,7 @@
 
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
-import SeasonPredictorJSON from '@/abis/SeasonPredictor.json';
-
-const SeasonPredictorABI = SeasonPredictorJSON.abi;
+import SeasonPredictorABI from '@/abis/SeasonPredictor.json';
 
 // ============ Read Hooks ============
 

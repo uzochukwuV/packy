@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Ticket, ExternalLink, CheckCircle2, Trophy } from "lucide-react";
 import { formatToken } from "@/contracts/types";
 import { formatDistance } from "date-fns";
-import { useClaimWinnings, usePreviewBetPayout } from "@/hooks/contracts/useBettingPool";
+import { useClaimWinnings } from "@/hooks/contracts/useBettingPool";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -29,10 +29,9 @@ interface Bet {
 function BetRow({ bet, onClaimed }: { bet: Bet; onClaimed: () => void }) {
   const { toast } = useToast();
   const { claimWinnings, isConfirming, isSuccess } = useClaimWinnings();
-  const { data: payoutData } = usePreviewBetPayout(BigInt(bet.betId));
 
-  const won = payoutData ? payoutData[0] : false;
-  const finalPayout = payoutData ? payoutData[2] : 0n;
+  const won = bet.status === 'won';
+  const finalPayout = BigInt(bet.potentialWinnings);
 
   useEffect(() => {
     if (isSuccess) {

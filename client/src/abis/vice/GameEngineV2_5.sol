@@ -17,7 +17,7 @@ contract GameEngine is VRFConsumerBaseV2Plus {
     // VRF configuration
     uint256 public s_subscriptionId;
     bytes32 public keyHash = 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae; // Sepolia gas lane
-    uint32 public callbackGasLimit = 500000;
+    uint32 public callbackGasLimit = 2000000;
     uint16 public requestConfirmations = 3;
     uint32 public numWords = uint32(MATCHES_PER_ROUND); // 1 random word per match; derive two scores per match
 
@@ -25,7 +25,7 @@ contract GameEngine is VRFConsumerBaseV2Plus {
     uint256 public constant TEAMS_COUNT = 20;
     uint256 public constant MATCHES_PER_ROUND = 10;
     uint256 public constant ROUNDS_PER_SEASON = 36;
-    uint256 public constant ROUND_DURATION = 15 minutes;
+    uint256 public constant ROUND_DURATION = 3 hours; // Changed from 15 minutes to 3 hours
 
     enum MatchOutcome {
         PENDING,
@@ -41,10 +41,7 @@ contract GameEngine is VRFConsumerBaseV2Plus {
         uint8 awayScore;
         MatchOutcome outcome;
         bool settled;
-        // Initial odds based on team stats (scaled by 100, e.g., 150 = 1.5x)
-        uint256 homeOdds;
-        uint256 awayOdds;
-        uint256 drawOdds;
+        // Odds removed - betting odds are managed by BettingPool
     }
 
     struct Team {
@@ -232,23 +229,14 @@ contract GameEngine is VRFConsumerBaseV2Plus {
             uint256 homeId = shuffledTeams[i * 2];
             uint256 awayId = shuffledTeams[i * 2 + 1];
 
-            // Calculate initial odds based on team stats
-            (uint256 homeOdds, uint256 awayOdds, uint256 drawOdds) = _calculateInitialOdds(
-                currentSeasonId,
-                homeId,
-                awayId
-            );
-
+            // Odds are now managed by BettingPool, not GameEngine
             newRound.matches[i] = Match({
                 homeTeamId: homeId,
                 awayTeamId: awayId,
                 homeScore: 0,
                 awayScore: 0,
                 outcome: MatchOutcome.PENDING,
-                settled: false,
-                homeOdds: homeOdds,
-                awayOdds: awayOdds,
-                drawOdds: drawOdds
+                settled: false
             });
         }
 
@@ -510,53 +498,8 @@ contract GameEngine is VRFConsumerBaseV2Plus {
      * @notice Calculate initial odds based on team season performance
      * @dev Odds are scaled by 100 (e.g., 150 = 1.5x payout)
      */
-    function _calculateInitialOdds(
-        uint256 seasonId,
-        uint256 homeTeamId,
-        uint256 awayTeamId
-    ) private view returns (uint256 homeOdds, uint256 awayOdds, uint256 drawOdds) {
-        Team memory homeTeam = seasonStandings[seasonId][homeTeamId];
-        Team memory awayTeam = seasonStandings[seasonId][awayTeamId];
-
-        // If no games played yet (first round), use default balanced odds
-        uint256 homeTotalGames = homeTeam.wins + homeTeam.draws + homeTeam.losses;
-        uint256 awayTotalGames = awayTeam.wins + awayTeam.draws + awayTeam.losses;
-
-        if (homeTotalGames == 0 || awayTotalGames == 0) {
-            // Default odds: slight home advantage
-            return (180, 220, 300); // 1.8x home, 2.2x away, 3.0x draw
-        }
-
-        // Calculate team strengths (0-100 scale)
-        uint256 homeStrength = (homeTeam.points * 100) / (homeTotalGames * 3);
-        int256 homeGoalDiff = int256(homeTeam.goalsFor) - int256(homeTeam.goalsAgainst);
-        homeStrength = homeStrength + uint256(homeGoalDiff > 0 ? homeGoalDiff : -homeGoalDiff) / homeTotalGames;
-
-        uint256 awayStrength = (awayTeam.points * 100) / (awayTotalGames * 3);
-        int256 awayGoalDiff = int256(awayTeam.goalsFor) - int256(awayTeam.goalsAgainst);
-        awayStrength = awayStrength + uint256(awayGoalDiff > 0 ? awayGoalDiff : -awayGoalDiff) / awayTotalGames;
-
-        // Add home advantage (10% boost to home strength)
-        homeStrength = (homeStrength * 110) / 100;
-
-        // Base odds calculation
-        uint256 totalStrength = homeStrength + awayStrength + 50; // +50 for draw probability
-
-        // Calculate implied probabilities and convert to odds
-        homeOdds = (totalStrength * 100) / (homeStrength > 0 ? homeStrength : 1);
-        awayOdds = (totalStrength * 100) / (awayStrength > 0 ? awayStrength : 1);
-        drawOdds = (totalStrength * 100) / 50;
-
-        // Apply bounds (minimum 1.2x, maximum 5.0x)
-        if (homeOdds < 120) homeOdds = 120;
-        if (homeOdds > 500) homeOdds = 500;
-        if (awayOdds < 120) awayOdds = 120;
-        if (awayOdds > 500) awayOdds = 500;
-        if (drawOdds < 200) drawOdds = 200;
-        if (drawOdds > 500) drawOdds = 500;
-
-        return (homeOdds, awayOdds, drawOdds);
-    }
+    // Odds calculation removed - now handled by BettingPool
+    // GameEngine only manages matches and VRF results
 
     // View functions for frontend
     function getCurrentRound() external view returns (uint256) {

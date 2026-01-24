@@ -6,10 +6,8 @@
 import { useReadContract, useReadContracts } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
-import GameEngineJSON from '@/abis/Gameengine.json';
+import GameEngineABI from '@/abis/Gameengine.json';
 import type { Match, Team, Season, Round } from '@/contracts/types';
-
-const GameEngineABI = GameEngineJSON.abi;
 
 // ============ Season & Round Info ============
 

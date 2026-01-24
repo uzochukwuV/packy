@@ -256,9 +256,46 @@ async function syncBetPlaced(
       return;
     }
 
-    // Calculate potential winnings
-    const totalStake = amount + bonus;
-    const potentialWinnings = (totalStake * parlayMultiplier) / BigInt(1e18);
+    // Calculate potential winnings based on locked odds
+    // The contract calculates: basePayout = Σ(amount × lockedOdds) then finalPayout = basePayout × parlayMultiplier
+    let potentialWinnings = BigInt(0);
+
+    try {
+      // Fetch locked odds for each match in the bet
+      let basePayout = BigInt(0);
+
+      for (let i = 0; i < matchIndices.length; i++) {
+        const matchIndex = matchIndices[i];
+        const outcome = outcomes[i];
+
+        // Get locked odds for this match
+        const oddsData = await publicClient.readContract({
+          address: CONTRACTS.bettingPool,
+          abi: BettingPoolABI as any,
+          functionName: 'getMatchOdds',
+          args: [roundId, matchIndex],
+        }) as readonly [bigint, bigint, bigint, boolean];
+
+        // oddsData = [homeOdds, awayOdds, drawOdds, locked]
+        let lockedOdds: bigint;
+        if (outcome === 1) lockedOdds = oddsData[0]; // home
+        else if (outcome === 2) lockedOdds = oddsData[1]; // away
+        else lockedOdds = oddsData[2]; // draw
+
+        // Calculate payout for this match: amount × odds
+        const matchPayout = (amount * lockedOdds) / BigInt(1e18);
+        basePayout += matchPayout;
+      }
+
+      // Apply parlay multiplier to get final payout
+      potentialWinnings = (basePayout * parlayMultiplier) / BigInt(1e18);
+
+      log(`Calculated potential winnings: ${potentialWinnings.toString()} (basePayout: ${basePayout.toString()}, multiplier: ${parlayMultiplier.toString()})`);
+    } catch (error: any) {
+      // Fallback: simple estimate (less accurate but better than nothing)
+      log(`Could not fetch locked odds, using simple estimate: ${error.message}`, 'warn');
+      potentialWinnings = (amount * parlayMultiplier) / BigInt(1e18);
+    }
 
     await storage.saveBet({
       betId: betId.toString(),

@@ -9,16 +9,21 @@ import { privateKeyToAccount } from 'viem/accounts';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Contract addresses on Sepolia (V2.5 - January 22, 2026)
+// Contract addresses on Sepolia (V2.5 - LATEST DEPLOYMENT - January 22, 2026)
 export const CONTRACTS = {
-  leagueToken: '0x48Ce9cAD6130206f733E693cC789Ef56e27d994f' as const,
-  gameEngine: '0x93b78E4b92a7e6b52Ed229C7D592CF41Fd43F459' as const,
-  liquidityPool: '0x54803f1e4aF71b0BFB40E66c2f78C8532D58Fd77' as const,
-  bettingPool: '0xA98052b027818d26374eB46e7FbBCeDde2e19533' as const,
-  seasonPredictor: '0xE75464943564907a2fa160050Af9494EAed39607' as const,
+  leagueToken: '0xEAe532bb7c4eA133158EF82B0dC1383ED6F91f00' as const,
+  gameEngine: '0xB01Cdb788CE759841223d14371caA1e7d61E2429' as const,
+  liquidityPool: '0x4FF5636b27746BDFB11A1e933e13B67C4B295dCB' as const,
+  bettingPool: '0x1E53A69d39dD198F60FA2b21Fac12C2a56DFCF69' as const,
+  seasonPredictor: '0xa85178299BF131bE63F31276D4F46f596001153D' as const,
 } as const;
 
-
+// === DEPLOYMENT SUMMARY ===
+//   LeagueToken: 0xEAe532bb7c4eA133158EF82B0dC1383ED6F91f00
+//   GameEngine: 0xB01Cdb788CE759841223d14371caA1e7d61E2429
+//   LiquidityPool: 0x4FF5636b27746BDFB11A1e933e13B67C4B295dCB
+//   BettingPool: 0x1E53A69d39dD198F60FA2b21Fac12C2a56DFCF69
+//   SeasonPredictor: 0xa85178299BF131bE63F31276D4F46f596001153D
 // Get admin private key from environment
 const ADMIN_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY as `0x${string}`;
 

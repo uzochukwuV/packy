@@ -7,9 +7,7 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { sepolia } from 'wagmi/chains';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
 import { formatUnits } from 'viem';
-import LeagueTokenJSON from '@/abis/League.json';
-
-const LeagueTokenABI = LeagueTokenJSON.abi;
+import LeagueTokenABI from '@/abis/League.json';
 
 /**
  * Get LEAGUE token balance for an address

@@ -6,7 +6,7 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 import { DEPLOYED_ADDRESSES } from '@/contracts/addresses';
-import BettingPoolJSON from '@/abis/bettingpool.json';
+import BettingPoolABI from '@/abis/bettingpool.json';
 import type {
   MatchOdds,
   ParlayInfo,
@@ -17,8 +17,6 @@ import type {
   MatchPool
 } from '@/contracts/types';
 import { useState } from 'react';
-
-const BettingPoolABI = BettingPoolJSON.abi;
 
 // ============ Read Hooks - Odds & Pool Data ============
 
@@ -43,7 +41,25 @@ export function useMarketOdds(
 }
 
 /**
- * Preview match odds (all three outcomes at once)
+ * Get locked match odds (fixed at seeding, never changes)
+ * Returns [homeOdds, awayOdds, drawOdds, locked]
+ */
+export function useMatchOdds(roundId: bigint | undefined, matchIndex: number) {
+  return useReadContract({
+    address: DEPLOYED_ADDRESSES.bettingPool,
+    abi: BettingPoolABI,
+    functionName: 'getMatchOdds',
+    args: roundId !== undefined ? [roundId, BigInt(matchIndex)] : undefined,
+    query: {
+      enabled: roundId !== undefined && matchIndex >= 0 && matchIndex < 10,
+      refetchInterval: 10000, // Locked odds don't change, slower refresh
+    },
+  });
+}
+
+/**
+ * Preview match odds (dynamic, changes with bets)
+ * Returns [homeOdds, awayOdds, drawOdds]
  */
 export function usePreviewMatchOdds(roundId: bigint | undefined, matchIndex: number) {
   return useReadContract({

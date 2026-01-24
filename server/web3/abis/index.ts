@@ -1,13 +1,9 @@
-import GameEngineJSON from "./GameEngine.json"
-import BettingPoolJSON from "./BettingPoolV2_1.json"
-import LiquidityPoolJSON from "./LiquidityPoolV2.json"
-import LeagueTokenJSON from "./LeagueToken.json"
-import SeasonPredictorJSON from "./SeasonPredictorV2.json"
+import GameEngineABI from "./GameEngine.json"
+import BettingPoolABI from "./BettingPoolV2_1.json"
+import LiquidityPoolABI from "./LiquidityPoolV2.json"
+import LeagueTokenABI from "./LeagueToken.json"
+import SeasonPredictorABI from "./SeasonPredictorV2.json"
 
-export const GameEngineABI = GameEngineJSON.abi
-export const BettingPoolABI = BettingPoolJSON.abi
-export const LiquidityPoolABI = LiquidityPoolJSON.abi
-export const LeagueTokenABI = LeagueTokenJSON
-export const SeasonPredictorABI = SeasonPredictorJSON.abi
+export { GameEngineABI, BettingPoolABI, LiquidityPoolABI, LeagueTokenABI, SeasonPredictorABI }
 
 export type { Abi } from "viem"
