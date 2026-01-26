@@ -285,6 +285,7 @@ export async function seedRoundPools(roundId: bigint): Promise<{
       abi: BettingPoolABI as any,
       functionName: 'seedRoundPools',
       args: [roundId],
+      gas: 5000000n, // Increase gas limit for seeding (seeds 10 matches)
     });
 
     const txHash = await walletClient.writeContract(request);
@@ -339,7 +340,7 @@ let monitoringInterval: NodeJS.Timeout | null = null;
 let lastSettledRoundId: bigint | null = null;
 let roundSettledAt: number | null = null;
 
-const NEXT_ROUND_DELAY_MS = 1000 * 60 * 1000; // 10 minutes
+const NEXT_ROUND_DELAY_MS = 100 * 60 * 10; // 10 minutes
 
 export function startMonitoring() {
   if (monitoringInterval) {
@@ -356,6 +357,32 @@ export function startMonitoring() {
   initializeGame().catch((error: any) => {
     log(`Failed to initialize game: ${error.message}`, 'error');
   });
+
+  // Check and seed current round if needed (after initialization)
+  setTimeout(async () => {
+    try {
+      const state = await getGameState();
+      if (state.currentRoundId > 0n) {
+        // Check if current round is seeded
+        const isSeeded = await publicClient.readContract({
+          address: CONTRACTS.bettingPool,
+          abi: BettingPoolABI as any,
+          functionName: 'isRoundSeeded',
+          args: [state.currentRoundId],
+        }) as boolean;
+
+        if (!isSeeded) {
+          log(`Current round ${state.currentRoundId} is not seeded. Seeding now...`, 'warn');
+          await seedRoundPools(state.currentRoundId);
+          log(`✅ Round ${state.currentRoundId} seeded`);
+        } else {
+          log(`Round ${state.currentRoundId} is already seeded`);
+        }
+      }
+    } catch (error: any) {
+      log(`Failed to check/seed current round: ${error.message}`, 'error');
+    }
+  }, 8000); // Wait 8 seconds for initialization to complete
 
   monitoringInterval = setInterval(async () => {
     try {

@@ -18,11 +18,22 @@ export function MatchCard({ roundId, matchIndex, match, startTime, bettingDisabl
   const { addBet, bets } = useBetSlip();
 
   // Fetch locked odds from blockchain (fixed at seeding time)
-  const { data: oddsData, isLoading: oddsLoading } = useMatchOdds(roundId, matchIndex);
+  const { data: oddsData, isLoading: oddsLoading, error: oddsError } = useMatchOdds(roundId, matchIndex);
 
   // Fetch team names
   const { data: homeTeam } = useTeam(Number(match.homeTeamId));
   const { data: awayTeam } = useTeam(Number(match.awayTeamId));
+
+  // Debug: Log odds data for first match
+  if (matchIndex === 0 && (oddsData || oddsError)) {
+    console.log('Match 0 odds:', {
+      roundId: roundId?.toString(),
+      matchIndex,
+      oddsData,
+      oddsError,
+      raw: oddsData ? [oddsData[0]?.toString(), oddsData[1]?.toString(), oddsData[2]?.toString(), oddsData[3]] : null
+    });
+  }
 
   // Parse odds from contract (returns [homeOdds, awayOdds, drawOdds, locked] as bigints)
   const homeOdds = oddsData ? formatOdds(oddsData[0]) : 0;

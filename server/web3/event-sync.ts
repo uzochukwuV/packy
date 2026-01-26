@@ -431,6 +431,13 @@ export function startEventListeners() {
       for (const eventLog of logs) {
         const { roundId, seasonId, startTime } = eventLog.args as any;
         await syncRoundStart(roundId, seasonId, startTime);
+
+        // Auto-seed the newly started round
+        log(`Auto-seeding round ${roundId} after RoundStarted event...`);
+        // Import seedRoundPools dynamically to avoid circular dependency
+        const { seedRoundPools } = await import('./game-monitor');
+        await seedRoundPools(roundId);
+        log(`✅ Round ${roundId} auto-seeded`);
       }
     },
     onError: (error: any) => {
